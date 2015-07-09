@@ -200,21 +200,36 @@ class Show:
             self.call_command(self.parse_line(line))
 
     def parse_line(self, line):
-        arg_path = '_'.join(line.lower().split(" "))
+        arg_path = line.lower().split(" ")
         if arg_path and len(arg_path)>0:
-            command = 'show_' + arg_path
+            command = 'show_' + '_'.join(arg_path)
+            orig_command = command
+            while not hasattr(self, command):
+                command = "_".join(command.split("_")[:-1])
+            if not orig_command == command:
+                command += "~" + orig_command.replace(command, "")[1:]
         else:
             command = None
         return command
 
     def call_command(self, command):
         try:
-            if ManPKI.ManPKI.debug:
-                print "SHOW Call : " + command
-            getattr(self, command)()
+            args = None
+            if '~' in command:
+                (command, args) = command.split('~')
+
+            if args:
+                if ManPKI.ManPKI.debug:
+                    print "SHOW Call : " + command
+                    print "SHOW Args : " + args
+                getattr(self, command)(args)
+            else:
+                if ManPKI.ManPKI.debug:
+                    print "SHOW Call : " + command
+                getattr(self, command)()
         except AttributeError:
             print "% Invalid input detected"
-        except TypeError:
+        except TypeError, e:
             print '% Type "show ?" for a list of subcommands'
 
     def show_help(self, line=None):
@@ -270,11 +285,14 @@ class Show:
 
     @staticmethod
     def _make_show_cmd(modul, module_name, func_name):
-        def handler_show(self):
+        def handler_show(self, args=None):
             try:
                 class_inst = getattr(modul, module_name)(False)
                 attr = getattr(class_inst, func_name)
-                attr()
+                if args:
+                    attr(args)
+                else:
+                    attr()
             except Exception, e:
                 print '*** error:', e
         return handler_show
