@@ -1,6 +1,6 @@
 __author__ = 'ferezgaetan'
 from ShShell import ShShell
-import cmd
+import Daemons
 
 class ShManage(ShShell):
 
@@ -10,5 +10,10 @@ class ShManage(ShShell):
     @staticmethod
     def help_manage():
         print "Enter configuration mode"
+
+    def show_status(self):
+        Daemons.Daemons.check_status()
+
+
 
 
