@@ -2,6 +2,7 @@ __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
 from Tools import Config, SSL, Render
+import re
 
 class ShCert(ShShell):
 
@@ -16,6 +17,21 @@ class ShCert(ShShell):
 
     def do_uri(self, line):
         Config().config.set("ocsp", "uri", line)
+
+    def do_create(self, line):
+        pass
+
+    def do_keysize(self, line):
+        if re.match("^\d*$", line):
+            Config().config.set("cert", "keysize", line)
+        else:
+            print "*** Keysize is not valid"
+
+    def do_validity(self, line):
+        if re.match("^\d*$", line):
+            Config().config.set("cert", "validity", line)
+        else:
+            print "*** Day validity is not valid"
 
     def show_cert(self, certid=None):
         list = []
