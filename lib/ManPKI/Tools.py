@@ -308,6 +308,10 @@ class SSL:
         return Config().config.get("default", "certdir") + "/public/ca/parentca.crt"
 
     @staticmethod
+    def get_ca_privatekey_path():
+        return Config().config.get("default", "certdir") + "/private/ca.privkey"
+
+    @staticmethod
     def check_ca_exist():
         return os.path.exists(SSL.get_ca_path())
 
@@ -328,6 +332,19 @@ class SSL:
         return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(filename, "rt").read())
 
     @staticmethod
+    def set_ca_privatekey(pkey):
+        priv_key_str = OpenSSL.crypto.dump_privatekey(pkey)
+        f = open(SSL.get_ca_privatekey_path(), 'w')
+        f.write(priv_key_str)
+
+    @staticmethod
+    def set_ca(cert):
+        #ca_str = OpenSSL.crypto.dump_certificate(cert)
+        f = open(SSL.get_ca_path(), 'w')
+        #f.write(ca_str)
+        f.write(cert)
+
+    @staticmethod
     def get_all_certificates():
         list = []
         certdir = Config().config.get("default", "certdir") + "/public/certificates/"
@@ -346,6 +363,31 @@ class SSL:
     @staticmethod
     def decode_time(time):
         return dt.datetime.strptime(time, "%Y%m%d%H%M%SZ").replace(tzinfo=UTC)
+
+    @staticmethod
+    def create_key(size):
+        key = OpenSSL.crypto.PKey()
+        key.generate_key(OpenSSL.crypto.TYPE_RSA, size)
+        return key
+
+    @staticmethod
+    def create_cert(key):
+        cert = OpenSSL.crypto.X509()
+        cert.set_pubkey(key)
+        return cert
+
+    @staticmethod
+    def create_extension(name, value, critical):
+        ext = OpenSSL.crypto.X509Extension(name, critical, value)
+        return ext
+
+    @staticmethod
+    def parse_str_to_x509Name(string):
+        cpts = string.split("/")
+        x509Name = OpenSSL.crypto.X509Name(OpenSSL.crypto.X509Name)
+        for elt in cpts:
+            exec "x509Name.%s=%s" % (elt.split("=")[0], elt.split("=")[1:])
+        return x509Name
 
     @staticmethod
     def display_cert(cert):

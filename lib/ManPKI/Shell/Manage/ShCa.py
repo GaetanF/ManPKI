@@ -2,6 +2,8 @@ __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
 from Tools import Config, SSL
+from OpenSSL import crypto
+from datetime import datetime, timedelta
 import re
 
 class ShCa(ShShell):
@@ -13,7 +15,7 @@ class ShCa(ShShell):
         Config().config.set("ca", "name", line)
 
     def do_basecn(self, line):
-        Config().config.set("ca", "basecn", line)
+        Config().config.set("ca", "base_cn", line)
 
     def do_extend(self, line):
         pass
@@ -22,7 +24,7 @@ class ShCa(ShShell):
         if not SSL.check_ca_exist():
             self.create_ca()
         else:
-            if raw_input("Do you want to erase current CA ? (y/n) :").lower() is "y":
+            if raw_input("Do you want to erase current CA ? (y/n) :").lower() == "y":
                 self.create_ca()
             else:
                 print "*** CA already created !"
@@ -36,7 +38,7 @@ class ShCa(ShShell):
     def do_type(self, line):
         (type, perimeter) = line.split(" ")
         Config().config.set("ca", "isfinal", "false")
-        if perimeter is "isfinal":
+        if perimeter == "isfinal":
             Config().config.set("ca", "isfinal", "true")
         if type in ("rootca", "subca"):
             Config().config.set("ca", "type", type)
@@ -45,7 +47,7 @@ class ShCa(ShShell):
 
     def do_keysize(self, line):
         if re.match("^\d*$", line):
-            Config().config.set("ca", "keysize", line)
+            Config().config.set("ca", "key_size", line)
         else:
             print "*** Keysize is not valid"
 
@@ -86,4 +88,53 @@ class ShCa(ShShell):
             print "Cannot get details. CA not created yet"
 
     def create_ca(self):
-        print "create ca"
+        if Config().config.get("ca", "type") == "subca":
+            if SSL.check_parentca_exist():
+                pass
+            else:
+                print "*** Parent CA must be exist before"
+        else:
+            before = datetime.utcnow()
+            after = before + timedelta(days=Config().config.getint("ca", "validity"))
+
+            pkey = SSL.create_key(Config().config.getint("ca", "key_size"))
+
+            subject = Config().config.get("ca", "base_cn") + "/CN=" + Config().config.get("ca", "name")
+            subject_x509 = SSL.parse_str_to_x509Name(subject)
+
+            ca = SSL.create_cert(pkey)
+            ca.set_subject(subject_x509)
+            ca.set_issuer(subject_x509)
+            ca.set_notBefore(before)
+            ca.set_notAfter(after)
+
+            bsConst = "CA:TRUE"
+            if Config().config.getboolean("ca", "isfinal"):
+                bsConst += ", pathlen:0"
+            ca.add_extensions([
+                crypto.X509Extension("basicConstraints", True, bsConst),
+                crypto.X509Extension("keyUsage", True, "keyCertSign, cRLSign"),
+                crypto.X509Extension("nsCertType", True, "sslCA, emailCA, objCA"),
+                crypto.X509Extension("subjectKeyIdentifier", False, "hash", subject=ca),
+            ])
+            ca.add_extensions([
+                crypto.X509Extension("authorityKeyIdentifier", False, "keyid:always", issuer=ca)
+            ])
+
+            if Config().config.getboolean("crl", "enable"):
+                crlUri = "URI:" + Config().config.get("crl", "uri")
+                ca.add_extensions([
+                    crypto.X509Extension("crlDistributionPoints", False, crlUri)
+                ])
+
+            if Config().config.getboolean("ocsp", "enable"):
+                ocspUri = "OCSP;URI:" + Config().config.get("ocsp", "uri")
+                ca.add_extensions([
+                    crypto.X509Extension("authorityInfoAccess", False, ocspUri)
+                ])
+
+            str = crypto.dump_certificate(ca)
+            ca_signed = crypto.sign(pkey, str, Config().config.get("ca", "digest"))
+            SSL.set_ca(ca_signed)
+            SSL.set_ca_privatekey(pkey)
+
