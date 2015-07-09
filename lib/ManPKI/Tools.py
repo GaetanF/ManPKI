@@ -1,0 +1,354 @@
+__author__ = 'ferezgaetan'
+
+import sys
+import ManPKI
+import ConfigParser
+import urlparse
+import tempfile
+import tftpy
+import shutil
+import urllib
+import ftplib
+import os
+import string
+import hashlib
+from pytz import UTC
+import datetime as dt
+import OpenSSL.crypto
+
+from scp import SCPClient
+from paramiko import SSHClient
+from os.path import splitext
+from cStringIO import StringIO
+
+import Exceptions.ProtocolException
+import Exceptions.CopyException
+
+IDENTCHARS = string.ascii_letters + string.digits + '_'
+
+class Capturing(list):
+    def __enter__(self):
+        self._stdout = sys.stdout
+        sys.stdout = self._stringio = StringIO()
+        return self
+
+    def __exit__(self, *args):
+        self.extend(self._stringio.getvalue().splitlines())
+        sys.stdout = self._stdout
+
+class Config:
+    config = None
+    config_path = "/Users/ferezgaetan/PycharmProjects/manpki/etc/manpki.conf"
+
+    def __init__(self):
+        if not Config.config:
+            if ManPKI.ManPKI.debug:
+                print "Read configuration file : " + Config.config_path
+            Config.config = ConfigParser.ConfigParser()
+            Config.config.read(Config.config_path)
+
+    def write(self):
+        # Writing our configuration file to 'example.cfg'
+        print "Building configuration..."
+        with open(Config.config_path, 'wb') as configfile:
+            Config.config.write(configfile)
+        print "[OK]"
+
+class Copy:
+
+    def report_http_progress(self, blocknr, blocksize, size):
+        current = blocknr*blocksize
+        sys.stdout.write("\rDownloading : {0:.2f}%".format(100.0*current/size))
+        if current/size == 1:
+            sys.stdout.write("\rDownloading : done\n")
+
+    def copy_tftp_to_tmp(self, uri):
+        client = tftpy.TftpClient(uri.hostname, uri.port if uri.port != None else 69)
+        client.download(uri.path, self.tmp_file.name)
+
+    def copy_ftp_to_tmp(self, uri):
+        urllib.urlretrieve(uri.geturl(), self.tmp_file.name, self.report_http_progress)
+
+    def copy_ssh_to_tmp(self, uri):
+        ssh = SSHClient()
+        ssh.load_system_host_keys()
+        print uri.username
+        if not uri.username:
+            ssh.connect(uri.hostname, allow_agent=True)
+        elif uri.username  and not uri.password:
+            ssh.connect(uri.hostname, username=uri.username, allow_agent=True)
+        elif uri.username and uri.password:
+            ssh.connect(uri.hostname, username=uri.username, password=uri.password, allow_agent=True)
+
+        # SCPCLient takes a paramiko transport as its only argument
+        scp = SCPClient(ssh.get_transport())
+        scp.get(uri.path, self.tmp_file.name)
+        scp.close()
+
+    def copy_http_to_tmp(self, uri):
+        urllib.urlretrieve(uri.geturl(), self.tmp_file.name, self.report_http_progress)
+
+    def copy_file_to_tmp(self, uri):
+        shutil.copy2(uri.path, self.tmp_file.name)
+
+    def copy_tmp_to_tftp(self, uri):
+        client = tftpy.TftpClient(uri.hostname, uri.port if uri.port != None else 69)
+        client.upload(uri.path, self.tmp_file.name)
+
+    def copy_tmp_to_ftp(self, uri):
+        session = ftplib.FTP(uri.hostname)
+
+        if uri.username  and not uri.password:
+            session.login(uri.username)
+        elif uri.username and uri.password:
+            session.login(uri.username, uri.password)
+
+        if os.path.dirname(uri.path):
+            session.cwd(os.path.dirname(uri.path))
+
+        session.storbinary('STOR ' + os.path.basename(uri.path), self.tmp_file)
+
+    def copy_tmp_to_ssh(self, uri):
+        ssh = SSHClient()
+        ssh.load_system_host_keys()
+        print uri.username
+        if not uri.username:
+            ssh.connect(uri.hostname, allow_agent=True)
+        elif uri.username  and not uri.password:
+            ssh.connect(uri.hostname, username=uri.username, allow_agent=True)
+        elif uri.username and uri.password:
+            ssh.connect(uri.hostname, username=uri.username, password=uri.password, allow_agent=True)
+
+        # SCPCLient takes a paramiko transport as its only argument
+        scp = SCPClient(ssh.get_transport())
+        scp.put(self.tmp_file.name, uri.path)
+        scp.close()
+
+    def copy_tmp_to_file(self, uri):
+        shutil.copy2(self.tmp_file.name, uri.path)
+
+    def __init__(self, source, dest):
+        self.methods_in = {
+            'tftp': self.copy_tftp_to_tmp,
+            'ftp' : self.copy_ftp_to_tmp,
+            'ssh' : self.copy_ssh_to_tmp,
+            'http': self.copy_http_to_tmp,
+            'file': self.copy_file_to_tmp
+        }
+
+        self.methods_out = {
+            'tftp': self.copy_tmp_to_tftp,
+            'ftp' : self.copy_tmp_to_ftp,
+            'ssh' : self.copy_tmp_to_ssh,
+            'file': self.copy_tmp_to_file
+        }
+        self.tmp_file = tempfile.NamedTemporaryFile()
+
+        source_uri = urlparse.urlparse(source)
+        try:
+            self.methods_in[source_uri.scheme](source_uri)
+        except KeyError:
+            print Exceptions.ProtocolException("Unknown protocol")
+        except Exception, e:
+            print e
+
+        dest_uri = urlparse.urlparse(dest)
+        try:
+            tmp_func = self.methods_out[dest_uri.scheme]
+            tmp_func(dest_uri)
+        except KeyError:
+            print Exceptions.ProtocolException("Unknown protocol")
+
+        self.tmp_file.close()
+
+class Render:
+
+    @staticmethod
+    def print_table(header, list):
+        size_cols = []
+        line = '+'
+        for i in range(0,len(header)):
+            size_cols.append(len(header[i])+2)
+        for element in list:
+            for i in range (0,len(header)):
+                if len(element[i])+2 > size_cols[i]:
+                    size_cols[i] = len(element[i])+2
+        for col in size_cols:
+            line += '-'*col + '+'
+        table = line + '\n|'
+        for i in range(0,len(header)):
+            table += " " + header[i] + (" "*(size_cols[i]-len(header[i])-1)) + "|"
+        table += "\n" + line + "\n"
+        for element in list:
+            table += "|"
+            for i in range(0,len(header)):
+                table += " " + element[i] + (" "*(size_cols[i]-len(element[i])-1)) + "|"
+            table += "\n"
+        print table + line + "\n"
+
+class Show:
+
+    base_dir = "/Users/ferezgaetan/PycharmProjects/manpki/lib/ManPKI/Shell"
+    identchars = IDENTCHARS
+    list_functions = []
+
+    def __init__(self, line):
+        self.load_functions()
+        if "?" in line:
+            self.show_help(line)
+        else:
+            self.call_command(self.parse_line(line))
+
+    def parse_line(self, line):
+        arg_path = '_'.join(line.lower().split(" "))
+        if arg_path and len(arg_path)>0:
+            command = 'show_' + arg_path
+        else:
+            command = None
+        return command
+
+    def call_command(self, command):
+        try:
+            if ManPKI.ManPKI.debug:
+                print "SHOW Call : " + command
+            getattr(self, command)()
+        except AttributeError:
+            print "% Invalid input detected"
+        except TypeError:
+            print '% Type "show ?" for a list of subcommands'
+
+    def show_help(self, line=None):
+        list_cmd = []
+        list_help = []
+        search_func = "show_"
+        if line and not "?" in line[0] and line.endswith("?"):
+            search_func += '_'.join(line.replace("?","").strip().lower().split(" ")) + "_"
+        for func in self.__class__.__dict__.keys():
+            if func.startswith(search_func) and not func.endswith("_help") and not "_" in func[len(search_func):]:
+                list_cmd.append(func[len(search_func):])
+                if hasattr(self, func + "_help"):
+                    with Capturing() as output:
+                        getattr(self, func + "_help")()
+                    list_help.append(output[0])
+                else:
+                    list_help.append("")
+        if len(list_cmd)>0:
+            print "\n".join("{0}\t{1}".format(a, b) for a, b in zip(list_cmd, list_help))
+        if not search_func == "show_":
+            if hasattr(self, search_func[:-1]):
+                print "<cr>"
+            else:
+                print "% Invalid input detected"
+
+    def show_config(self):
+        for section in Config().config.sections():
+            print section
+            for option in Config().config.options(section):
+                print " ", option, "=", Config().config.get(section, option)
+
+    def load_functions(self):
+        if os.path.isdir(self.base_dir) and len(Show.list_functions) == 0:
+            for dirpath,dirnames,filenames in os.walk(self.base_dir):
+                for name in filenames:
+                    if name.startswith("Sh") and name.endswith(".py"):
+                        module_name = splitext(name)[0]
+                        path = dirpath.replace(self.base_dir, "")[1:]
+                        module_path = "Shell."
+                        if len(path)>0:
+                            module_path += '.'.join(path.split("/")).title() + "." + module_name
+                        else:
+                            module_path += module_name
+                        import_str = "from " + module_path + " import " + module_name
+                        if ManPKI.ManPKI.debug:
+                            print "Import all sub show from file " + name + " : " + import_str
+                        exec import_str
+                        modul = sys.modules[module_path]
+                        for func_name in getattr(modul, module_name).__dict__.keys():
+                            if func_name.startswith("show_"):
+                                Show.list_functions.append([modul, module_name, func_name])
+                                setattr(self.__class__, func_name, self._make_show_cmd(modul, module_name, func_name));
+
+    @staticmethod
+    def _make_show_cmd(modul, module_name, func_name):
+        def handler_show(self):
+            try:
+                class_inst = getattr(modul, module_name)(False)
+                attr = getattr(class_inst, func_name)
+                attr()
+            except Exception, e:
+                print '*** error:', e
+        return handler_show
+
+class SSL:
+
+    @staticmethod
+    def get_ca_path():
+        return Config().config.get("default", "certdir") + "/public/ca/ca.crt"
+
+    @staticmethod
+    def get_parentca_path():
+        return Config().config.get("default", "certdir") + "/public/ca/parentca.crt"
+
+    @staticmethod
+    def check_ca_exist():
+        return os.path.exists(SSL.get_ca_path())
+
+    @staticmethod
+    def check_parentca_exist():
+        return os.path.exists(SSL.get_parentca_path())
+
+    @staticmethod
+    def get_cert_id(cert):
+        return hashlib.md5(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)).hexdigest()[:10].upper()
+
+    @staticmethod
+    def get_ca():
+        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_ca_path(), "rt").read())
+
+    @staticmethod
+    def read_cert(filename):
+        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(filename, "rt").read())
+
+    @staticmethod
+    def get_all_certificates():
+        list = []
+        certdir = Config().config.get("default", "certdir") + "/public/certificates/"
+        for name in os.listdir(certdir):
+            if name.endswith(".crt"):
+                list.append({'id': name[:-4], 'cert': SSL.read_cert(certdir + name)})
+        return list
+
+    @staticmethod
+    def get_x509_name(x509name):
+        str = ""
+        for (name,value) in x509name.get_components():
+            str += name + "=%s, " % value
+        return str[:-2]
+
+    @staticmethod
+    def decode_time(time):
+        return dt.datetime.strptime(time, "%Y%m%d%H%M%SZ").replace(tzinfo=UTC)
+
+    @staticmethod
+    def display_cert(cert):
+        print "ID : %s " % SSL.get_cert_id(cert)
+        print "Subject : %s " % SSL.get_x509_name(cert.get_subject())
+        print "Issuer : %s " % SSL.get_x509_name(cert.get_issuer())
+        print "Serial : %s" % cert.get_serial_number()
+        print "Key size : %s" % cert.get_pubkey().bits()
+        print "Version : %s" % cert.get_version()
+        print "State : Expired" if cert.has_expired() else "State : OK"
+        print "Validity"
+        after_datetime = SSL.decode_time(cert.get_notAfter())
+        delta =  after_datetime.replace(tzinfo=None) - after_datetime.utcoffset() - dt.datetime.now()
+        print "\tNot before : %s" % SSL.decode_time(cert.get_notBefore()).strftime("%c %Z")
+        print "\tNot after : %s (%s)" % ( SSL.decode_time(cert.get_notAfter()).strftime("%c %Z"), delta)
+        print "Algorithm"
+        if cert.get_pubkey().type() == OpenSSL.crypto.TYPE_RSA:
+            print "\tPublic key : %s" % "rsaEncryption"
+        elif cert.get_pubkey().type() == OpenSSL.crypto.TYPE_DSA:
+            print "\tPublic key : %s" % "dsaEncryption"
+        print "\tSignature : %s" % cert.get_signature_algorithm()
+        print "Fingerprint"
+        print "\tSHA1 : %s" % cert.digest(b"sha1")
+        print "\tMD5 : %s" % cert.digest(b"md5")
