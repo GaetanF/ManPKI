@@ -4,6 +4,7 @@ import os.path
 import OpenSSL
 import ConfigParser
 import Secret
+from Tools import Mailer
 
 config = ConfigParser.ConfigParser()
 config.read(Secret.config_file)
@@ -27,6 +28,8 @@ if os.path.exists(ca_file) and os.path.exists(ca_private) and config.getint("crl
     f = open(crl_file, "w")
     f.write(crl_str)
     f.close()
-
-
-
+    if ca_cert.get_subject().emailAddress:
+        mail = Mailer()
+        mail.to(ca_cert.get_subject().emailAddress)
+        mail.subject("CRL Creation")
+        mail.send("CRL file has been created")

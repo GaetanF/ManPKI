@@ -108,6 +108,11 @@ class ShCa(ShShell):
             subject = Config().config.get("ca", "base_cn") + "/CN=" + Config().config.get("ca", "name")
             subject_x509 = SSL.parse_str_to_x509Name(subject, ca.get_subject())
             issuer_x509 = SSL.parse_str_to_x509Name(subject, ca.get_issuer())
+
+            if Config().config.get("ca", "email"):
+                subject_x509.emailAddress = Config().config.get("ca", "email")
+                issuer_x509.emailAddress = Config().config.get("ca", "email")
+
             ca.set_subject(subject_x509)
             ca.set_issuer(issuer_x509)
             ca.set_notBefore(before.strftime("%Y%m%d%H%M%S%Z")+"Z")

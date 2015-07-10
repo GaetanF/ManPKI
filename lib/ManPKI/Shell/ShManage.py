@@ -17,8 +17,10 @@ class ShManage(ShShell):
         Daemons.Daemons.check_status()
 
     def do_smtp(self, line):
-        Config().config.set("smtp", "server", line)
-
-
-
-
+        if " " in line:
+            if line.split(" ")[0] == "server":
+                Config().config.set("smtp", "server", line.split(" ")[1])
+            elif line.split(" ")[0] == "from":
+                Config().config.set("smtp", "from", line.split(" ")[1])
+        else:
+            print "server\tConfigure smtp server\nfrom\tConfigure source mail address"

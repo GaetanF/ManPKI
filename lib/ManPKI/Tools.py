@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 import sys
-import ManPKI
+import Secret
 import ConfigParser
 import urlparse
 import tempfile
@@ -45,7 +45,7 @@ class Config:
 
     def __init__(self):
         if not Config.config:
-            if ManPKI.ManPKI.debug:
+            if Secret.debug:
                 print "Read configuration file : " + Config.config_path
             Config.config = ConfigParser.ConfigParser()
             Config.config.read(Config.config_path)
@@ -166,6 +166,35 @@ class Copy:
         self.tmp_file.close()
 
 
+class Mailer:
+    def __init__(self):
+        self.sender = Config().config.get("smtp", "from")
+
+    def sender(self, address):
+        self.sender = address
+
+    def to(self, address):
+        self.to = address
+
+    def subject(self, subject):
+        self.subject = subject
+
+    def send(self, content, attachments=None):
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        msg = MIMEMultipart('alternative')
+        msg.attach(MIMEText(content, 'plain'))
+        msg['Subject'] = self.subject
+        msg['From'] = self.sender
+        msg['To'] = self.to
+
+        # Send the message via our own SMTP server, but don't include the
+        # envelope header.
+        s = smtplib.SMTP(Config().config.get("smtp", "server"))
+        s.sendmail(self.sender, [self.to], msg.as_string())
+        s.quit()
+
+
 class Render:
 
     @staticmethod
@@ -228,12 +257,12 @@ class Show:
                 (command, args) = command.split('~')
 
             if args:
-                if ManPKI.ManPKI.debug:
+                if Secret.debug:
                     print "SHOW Call : " + command
                     print "SHOW Args : " + args
                 getattr(self, command)(args)
             else:
-                if ManPKI.ManPKI.debug:
+                if Secret.debug:
                     print "SHOW Call : " + command
                 getattr(self, command)()
         except AttributeError:
@@ -283,7 +312,7 @@ class Show:
                         else:
                             module_path += module_name
                         import_str = "from " + module_path + " import " + module_name
-                        if ManPKI.ManPKI.debug:
+                        if Secret.debug:
                             print "Import all sub show from file " + name + " : " + import_str
                         exec import_str
                         modul = sys.modules[module_path]
@@ -306,8 +335,6 @@ class Show:
                 print '*** error:', e
         return handler_show
 
-class Mailer:
-    pass
 
 class SSL:
 
@@ -396,7 +423,6 @@ class SSL:
 
     @staticmethod
     def sign(cert, key, digest):
-        #str = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
         cert.sign(key, digest)
         return cert
 
