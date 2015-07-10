@@ -2,6 +2,7 @@ __author__ = 'ferezgaetan'
 from ShShell import ShShell
 import Daemons
 
+
 class ShManage(ShShell):
 
     def __init__(self, init_all=True):

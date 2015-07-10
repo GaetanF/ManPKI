@@ -4,6 +4,7 @@ from ShShell import ShShell
 from Tools import Config, SSL, Render
 import re
 
+
 class ShCert(ShShell):
 
     def __init__(self, init_all=True):

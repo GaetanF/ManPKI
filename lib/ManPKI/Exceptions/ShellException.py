@@ -1,5 +1,6 @@
 __author__ = 'ferezgaetan'
 
+
 class ShellException(Exception):
 
     def __init__(self, reason):

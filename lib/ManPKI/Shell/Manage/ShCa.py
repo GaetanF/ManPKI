@@ -6,6 +6,7 @@ from OpenSSL import crypto
 from datetime import datetime, timedelta
 import re
 
+
 class ShCa(ShShell):
 
     def __init__(self, init_all=True):

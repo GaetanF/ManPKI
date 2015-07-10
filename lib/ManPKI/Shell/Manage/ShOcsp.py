@@ -3,6 +3,7 @@ __author__ = 'ferezgaetan'
 from ShShell import ShShell
 from Tools import Config
 
+
 class ShOcsp(ShShell):
 
     def __init__(self, init_all=True):

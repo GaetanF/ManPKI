@@ -5,6 +5,7 @@ from Tools import Config
 import ldap
 import re
 
+
 class ShLdap(ShShell):
 
     def __init__(self, init_all=True):

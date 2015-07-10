@@ -26,6 +26,7 @@ import Exceptions.CopyException
 
 IDENTCHARS = string.ascii_letters + string.digits + '_'
 
+
 class Capturing(list):
     def __enter__(self):
         self._stdout = sys.stdout
@@ -35,6 +36,7 @@ class Capturing(list):
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
+
 
 class Config:
     config = None
@@ -53,6 +55,7 @@ class Config:
         with open(Config.config_path, 'wb') as configfile:
             Config.config.write(configfile)
         print "[OK]"
+
 
 class Copy:
 
@@ -161,6 +164,7 @@ class Copy:
 
         self.tmp_file.close()
 
+
 class Render:
 
     @staticmethod
@@ -185,6 +189,7 @@ class Render:
                 table += " " + element[i] + (" "*(size_cols[i]-len(element[i])-1)) + "|"
             table += "\n"
         print table + line + "\n"
+
 
 class Show:
 
@@ -299,6 +304,7 @@ class Show:
             except Exception, e:
                 print '*** error:', e
         return handler_show
+
 
 class SSL:
 
