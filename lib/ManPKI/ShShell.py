@@ -5,7 +5,7 @@ import sys
 import shlex
 from Tools import Config, Copy, Show
 from os.path import isfile, join, splitext
-import ManPKI
+import Secret
 
 
 class ShShell(cmd.Cmd):
@@ -64,14 +64,14 @@ class ShShell(cmd.Cmd):
                     else:
                         module_path += module_name
                     import_str = "from " + module_path + " import " + module_name
-                    if ManPKI.ManPKI.debug:
+                    if Secret.debug:
                         print "Import sub shell from file " + name + ": " + import_str
                     exec import_str
                     modul = sys.modules[module_path]
-                    if ManPKI.ManPKI.debug:
+                    if Secret.debug:
                         print "Generate do_" + module_name.lower()[2:] + " method"
                     setattr(self.__class__, 'do_' + module_name.lower()[2:], self._make_cmd(modul, module_name));
-                    if ManPKI.ManPKI.debug:
+                    if Secret.debug:
                         print "Generate help_" + module_name.lower()[2:] + " method"
                     setattr(self.__class__, 'help_' + module_name.lower()[2:], self._make_help(modul, module_name));
 
