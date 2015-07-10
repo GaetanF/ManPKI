@@ -12,6 +12,7 @@ import ftplib
 import os
 import string
 import hashlib
+import smtplib
 from pytz import UTC
 import datetime as dt
 import OpenSSL.crypto
@@ -305,6 +306,8 @@ class Show:
                 print '*** error:', e
         return handler_show
 
+class Mailer:
+    pass
 
 class SSL:
 

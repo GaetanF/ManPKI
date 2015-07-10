@@ -1,5 +1,6 @@
 __author__ = 'ferezgaetan'
 from ShShell import ShShell
+from Tools import Config
 import Daemons
 
 
@@ -14,6 +15,9 @@ class ShManage(ShShell):
 
     def show_status(self):
         Daemons.Daemons.check_status()
+
+    def do_smtp(self, line):
+        Config().config.set("smtp", "server", line)
 
 
 
