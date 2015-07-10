@@ -2,6 +2,8 @@ __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
 from Tools import Config
+import re
+
 
 class ShCrl(ShShell):
 
@@ -13,6 +15,18 @@ class ShCrl(ShShell):
 
     def do_enable(self, line):
         Config().config.set("crl", "enable", "true")
+
+    def do_validity(self, line):
+        if re.match("^\d*$", line):
+            Config().config.set("crl", "validity", line)
+        else:
+            print "*** CRL Validity is not valid"
+
+    def do_remote(self, line):
+        if re.match("^(ssh|ftp|tftp)://.*$"):
+            Config().config.set("crl", "remote", line)
+        else:
+            print "*** CRL Remote publish is not valid"
 
     def do_uri(self, line):
         Config().config.set("crl", "uri", line)
