@@ -22,9 +22,15 @@ class ShCrl(ShShell):
         else:
             print "*** CRL Validity is not valid"
 
-    def do_remote(self, line):
+    def do_digest(self, line):
+        if line in ("md2", "md5", "mdc2", "rmd160", "sha", "sha1", "sha224", "sha256", "sha384", "sha512"):
+            Config().config.set("crl", "digest", line)
+        else:
+            print "*** Digest is not valid"
+
+    def do_publisher(self, line):
         if re.match("^(ssh|ftp|tftp)://.*$"):
-            Config().config.set("crl", "remote", line)
+            Config().config.set("crl", "publisher", line)
         else:
             print "*** CRL Remote publish is not valid"
 
