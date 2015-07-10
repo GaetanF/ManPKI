@@ -1,7 +1,8 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config
+from Tools import Config, SSL
+import hashlib
 
 class ShDane(ShShell):
 
@@ -13,6 +14,23 @@ class ShDane(ShShell):
 
     def do_enable(self, line):
         Config().config.set("dane", "enable", "true")
+
+    def do_generate(self, line):
+        if " " in line and len(line.split(" ")) == 4:
+            (proto, port, fqdn, certid) = line.split(" ")
+            if proto in ("tcp", "udp"):
+                if int(port) > 1 and int(port) < 65535:
+                    if SSL.check_cert_exist(certid):
+                        hash = hashlib.sha256(SSL.get_asn_cert_raw(certid)).hexdigest()
+                        print "_%s._%s.%s.\tIN\tTLSA\t3 0 1 ( %s )" % (port, proto, fqdn, hash)
+                    else:
+                        print "*** Certificate does not exist"
+                else:
+                    print "*** Invalid port number"
+            else:
+                print "*** Invalid protocol"
+        else:
+            print "generate <proto> <port> <fqdn> <certid>"
 
     def show_dane(self):
         for name in Config().config.options("dane"):

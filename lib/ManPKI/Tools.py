@@ -355,6 +355,10 @@ class SSL:
         return Config().config.get("default", "certdir") + "/public/ca/crl.pem"
 
     @staticmethod
+    def get_cert_path(certid):
+        return Config().config.get("default", "certdir") + "/public/certificates/" + certid + ".crt"
+
+    @staticmethod
     def check_ca_exist():
         return os.path.exists(SSL.get_ca_path()) and os.path.exists(SSL.get_ca_privatekey_path())
 
@@ -365,6 +369,10 @@ class SSL:
     @staticmethod
     def check_crl_exist():
         return os.path.exists(SSL.get_crl_path())
+
+    @staticmethod
+    def check_cert_exist(certid):
+        return os.path.exists(SSL.get_cert_path(certid))
 
     @staticmethod
     def get_cert_id(cert):
@@ -387,6 +395,10 @@ class SSL:
     @staticmethod
     def read_cert(filename):
         return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(filename, "rt").read())
+
+    @staticmethod
+    def get_asn_cert_raw(certid):
+        return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, SSL.read_cert(SSL.get_cert_path(certid)))
 
     @staticmethod
     def set_ca_privatekey(pkey):
@@ -421,6 +433,13 @@ class SSL:
             if name.endswith(".crt"):
                 list.append({'id': name[:-4], 'cert': SSL.read_cert(certdir + name)})
         return list
+
+    @staticmethod
+    def get_cert(certid):
+        if SSL.check_cert_exist(certid):
+            return SSL.read_cert(SSL.get_cert_path(certid))
+        else:
+            return None
 
     @staticmethod
     def get_x509_name(x509name):
@@ -474,6 +493,10 @@ class SSL:
             return True
         else:
             return False
+
+    @staticmethod
+    def display_cert_by_id(certid):
+        SSL.display_cert(SSL.get_cert(certid))
 
     @staticmethod
     def display_cert(cert):
