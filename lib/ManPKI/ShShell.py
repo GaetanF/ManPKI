@@ -70,10 +70,10 @@ class ShShell(cmd.Cmd):
                     modul = sys.modules[module_path]
                     if Secret.debug:
                         print "Generate do_" + module_name.lower()[2:] + " method"
-                    setattr(self.__class__, 'do_' + module_name.lower()[2:], self._make_cmd(modul, module_name));
+                    setattr(self.__class__, 'do_' + module_name.lower()[2:], self._make_cmd(modul, module_name))
                     if Secret.debug:
                         print "Generate help_" + module_name.lower()[2:] + " method"
-                    setattr(self.__class__, 'help_' + module_name.lower()[2:], self._make_help(modul, module_name));
+                    setattr(self.__class__, 'help_' + module_name.lower()[2:], self._make_help(modul, module_name))
 
     @staticmethod
     def _make_cmd(modul, module_name):

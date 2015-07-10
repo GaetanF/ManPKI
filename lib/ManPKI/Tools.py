@@ -319,7 +319,7 @@ class Show:
                         for func_name in getattr(modul, module_name).__dict__.keys():
                             if func_name.startswith("show_"):
                                 Show.list_functions.append([modul, module_name, func_name])
-                                setattr(self.__class__, func_name, self._make_show_cmd(modul, module_name, func_name));
+                                setattr(self.__class__, func_name, self._make_show_cmd(modul, module_name, func_name))
 
     @staticmethod
     def _make_show_cmd(modul, module_name, func_name):

@@ -29,7 +29,7 @@ class ShCrl(ShShell):
             print "*** Digest is not valid"
 
     def do_publisher(self, line):
-        if re.match("^(ssh|ftp|tftp)://.*$"):
+        if re.match('^(ssh|ftp|tftp)://.*$'):
             Config().config.set("crl", "publisher", line)
         else:
             print "*** CRL Remote publish is not valid"
