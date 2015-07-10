@@ -25,7 +25,7 @@ class ShCa(ShShell):
             self.create_ca()
         else:
             if raw_input("Do you want to erase current CA ? (y/n) :").lower() == "y":
-                self.create_ca()
+                self.create_ca(force=True)
             else:
                 print "*** CA already created !"
 
@@ -36,7 +36,11 @@ class ShCa(ShShell):
             print "*** Digest is not valid"
 
     def do_type(self, line):
-        (type, perimeter) = line.split(" ")
+        if " " in line:
+            (type, perimeter) = line.split(" ")
+        else:
+            type = line
+            perimeter=None
         Config().config.set("ca", "isfinal", "false")
         if perimeter == "isfinal":
             Config().config.set("ca", "isfinal", "true")
@@ -87,7 +91,7 @@ class ShCa(ShShell):
         else:
             print "Cannot get details. CA not created yet"
 
-    def create_ca(self):
+    def create_ca(self, force=False):
         if Config().config.get("ca", "type") == "subca":
             if SSL.check_parentca_exist():
                 pass
@@ -99,14 +103,14 @@ class ShCa(ShShell):
 
             pkey = SSL.create_key(Config().config.getint("ca", "key_size"))
 
-            subject = Config().config.get("ca", "base_cn") + "/CN=" + Config().config.get("ca", "name")
-            subject_x509 = SSL.parse_str_to_x509Name(subject)
-
             ca = SSL.create_cert(pkey)
+            subject = Config().config.get("ca", "base_cn") + "/CN=" + Config().config.get("ca", "name")
+            subject_x509 = SSL.parse_str_to_x509Name(subject, ca.get_subject())
+            issuer_x509 = SSL.parse_str_to_x509Name(subject, ca.get_issuer())
             ca.set_subject(subject_x509)
-            ca.set_issuer(subject_x509)
-            ca.set_notBefore(before)
-            ca.set_notAfter(after)
+            ca.set_issuer(issuer_x509)
+            ca.set_notBefore(before.strftime("%Y%m%d%H%M%S%Z")+"Z")
+            ca.set_notAfter(after.strftime("%Y%m%d%H%M%S%Z")+"Z")
 
             bsConst = "CA:TRUE"
             if Config().config.getboolean("ca", "isfinal"):
@@ -133,8 +137,12 @@ class ShCa(ShShell):
                     crypto.X509Extension("authorityInfoAccess", False, ocspUri)
                 ])
 
-            str = crypto.dump_certificate(ca)
-            ca_signed = crypto.sign(pkey, str, Config().config.get("ca", "digest"))
+            ca_signed = SSL.sign(ca, pkey, Config().config.get("ca", "digest"))
             SSL.set_ca(ca_signed)
             SSL.set_ca_privatekey(pkey)
 
+            if force:
+                self.resigned_all_cert()
+
+    def resigned_all_cert(self):
+        pass

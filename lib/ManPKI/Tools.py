@@ -204,8 +204,11 @@ class Show:
         if arg_path and len(arg_path)>0:
             command = 'show_' + '_'.join(arg_path)
             orig_command = command
-            while not hasattr(self, command):
+            while not hasattr(self, command) and command != "show":
                 command = "_".join(command.split("_")[:-1])
+            if command == "show":
+                print "% Undefine command"
+                return "show_help"
             if not orig_command == command:
                 command += "~" + orig_command.replace(command, "")[1:]
         else:
@@ -333,16 +336,17 @@ class SSL:
 
     @staticmethod
     def set_ca_privatekey(pkey):
-        priv_key_str = OpenSSL.crypto.dump_privatekey(pkey)
+        priv_key_str = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, pkey)
         f = open(SSL.get_ca_privatekey_path(), 'w')
         f.write(priv_key_str)
 
     @staticmethod
     def set_ca(cert):
-        #ca_str = OpenSSL.crypto.dump_certificate(cert)
+        ca_str = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
         f = open(SSL.get_ca_path(), 'w')
-        #f.write(ca_str)
-        f.write(cert)
+        f.write(ca_str)
+        #f.write(cert)
+        f.close()
 
     @staticmethod
     def get_all_certificates():
@@ -382,11 +386,17 @@ class SSL:
         return ext
 
     @staticmethod
-    def parse_str_to_x509Name(string):
+    def sign(cert, key, digest):
+        #str = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        cert.sign(key, digest)
+        return cert
+
+    @staticmethod
+    def parse_str_to_x509Name(string, x509obj):
         cpts = string.split("/")
-        x509Name = OpenSSL.crypto.X509Name(OpenSSL.crypto.X509Name)
+        x509Name = x509obj
         for elt in cpts:
-            exec "x509Name.%s=%s" % (elt.split("=")[0], elt.split("=")[1:])
+            exec "x509Name.%s='%s'" % (elt.split("=")[0], elt.split("=")[1])
         return x509Name
 
     @staticmethod
