@@ -351,20 +351,38 @@ class SSL:
         return Config().config.get("default", "certdir") + "/private/ca.privkey"
 
     @staticmethod
+    def get_crl_path():
+        return Config().config.get("default", "certdir") + "/public/ca/crl.pem"
+
+    @staticmethod
     def check_ca_exist():
-        return os.path.exists(SSL.get_ca_path())
+        return os.path.exists(SSL.get_ca_path()) and os.path.exists(SSL.get_ca_privatekey_path())
 
     @staticmethod
     def check_parentca_exist():
         return os.path.exists(SSL.get_parentca_path())
 
     @staticmethod
+    def check_crl_exist():
+        return os.path.exists(SSL.get_crl_path())
+
+    @staticmethod
     def get_cert_id(cert):
-        return hashlib.md5(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)).hexdigest()[:10].upper()
+        cert_content = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        return hashlib.md5(cert_content).hexdigest()[:10].upper()
 
     @staticmethod
     def get_ca():
         return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_ca_path(), "rt").read())
+
+    @staticmethod
+    def get_ca_privatekey():
+        content_privatekey = open(SSL.get_ca_privatekey_path(), "rt").read()
+        return OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, content_privatekey)
+
+    @staticmethod
+    def get_crl():
+        return OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_crl_path(), "rt").read())
 
     @staticmethod
     def read_cert(filename):
@@ -381,8 +399,19 @@ class SSL:
         ca_str = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
         f = open(SSL.get_ca_path(), 'w')
         f.write(ca_str)
-        #f.write(cert)
         f.close()
+
+    @staticmethod
+    def set_crl(crl):
+        days = Config().config.getint("crl", "validity")
+        crl_str = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_PEM, days=days)
+        f = open(SSL.get_crl_path(), "w")
+        f.write(crl_str)
+        f.close()
+
+    @staticmethod
+    def revoke_cert(certid, reason):
+        pass
 
     @staticmethod
     def get_all_certificates():
@@ -433,6 +462,18 @@ class SSL:
         for elt in cpts:
             exec "x509Name.%s='%s'" % (elt.split("=")[0], elt.split("=")[1])
         return x509Name
+
+    @staticmethod
+    def generate_crl():
+        if SSL.check_ca_exist():
+            crl = OpenSSL.crypto.CRL()
+            if SSL.check_crl_exist():
+                crl = SSL.get_crl()
+
+            SSL.set_crl(crl)
+            return True
+        else:
+            return False
 
     @staticmethod
     def display_cert(cert):
