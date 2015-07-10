@@ -9,15 +9,15 @@ class ShCrl(ShShell):
         ShShell.__init__(self, init_all)
 
     def do_disable(self, line):
-        Config().config.set("ocsp", "enable", "false")
+        Config().config.set("crl", "enable", "false")
 
     def do_enable(self, line):
-        Config().config.set("ocsp", "enable", "true")
+        Config().config.set("crl", "enable", "true")
 
     def do_uri(self, line):
-        Config().config.set("ocsp", "uri", line)
+        Config().config.set("crl", "uri", line)
 
-    def show_ocsp(self):
-        for name in Config().config.options("ocsp"):
-            value = Config().config.get("ocsp", name)
+    def show_crl(self):
+        for name in Config().config.options("crl"):
+            value = Config().config.get("crl", name)
             print '  %-12s : %s' % (name.title(), value)
