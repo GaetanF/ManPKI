@@ -3,6 +3,7 @@ __author__ = 'ferezgaetan'
 from ShShell import ShShell
 from Tools import Config, SSL
 from OpenSSL import crypto
+from time import time
 from datetime import datetime, timedelta
 import re
 
@@ -26,6 +27,7 @@ class ShCa(ShShell):
             self.create_ca()
         else:
             if raw_input("Do you want to erase current CA ? (y/n) :").lower() == "y":
+                print "All sub certificates will be resigned"
                 self.create_ca(force=True)
             else:
                 print "*** CA already created !"
@@ -117,6 +119,8 @@ class ShCa(ShShell):
             ca.set_issuer(issuer_x509)
             ca.set_notBefore(before.strftime("%Y%m%d%H%M%S%Z")+"Z")
             ca.set_notAfter(after.strftime("%Y%m%d%H%M%S%Z")+"Z")
+            ca.set_serial_number(int(time() * 1000000))
+            ca.set_version(2)
 
             bsConst = "CA:TRUE"
             if Config().config.getboolean("ca", "isfinal"):
@@ -124,7 +128,6 @@ class ShCa(ShShell):
             ca.add_extensions([
                 crypto.X509Extension("basicConstraints", True, bsConst),
                 crypto.X509Extension("keyUsage", True, "keyCertSign, cRLSign"),
-                crypto.X509Extension("nsCertType", True, "sslCA, emailCA, objCA"),
                 crypto.X509Extension("subjectKeyIdentifier", False, "hash", subject=ca),
             ])
             ca.add_extensions([
@@ -151,4 +154,6 @@ class ShCa(ShShell):
                 self.resigned_all_cert()
 
     def resigned_all_cert(self):
-        pass
+        for certhash in SSL.get_all_certificates():
+            cert_signed = SSL.sign(certhash['cert'], SSL.get_ca_privatekey(), Config().config.get("cert", "digest"))
+            SSL.set_cert(cert_signed)

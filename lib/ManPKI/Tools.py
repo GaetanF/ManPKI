@@ -17,6 +17,7 @@ from pytz import UTC
 import datetime as dt
 import OpenSSL.crypto
 import shlex, subprocess, re
+from collections import OrderedDict
 
 from scp import SCPClient
 from paramiko import SSHClient
@@ -44,7 +45,7 @@ class Config:
     config = None
     config_path = "/Users/ferezgaetan/PycharmProjects/manpki/etc/manpki.conf"
 
-    sections = ("default", "ca", "crl", "ocsp", "keyusage", "extended", "ldap", "smtp")
+    sections = ("default", "ca", "crl", "ocsp", "keyusage", "extended", "ldap", "smtp", "cert")
 
     def __init__(self):
         if not Config.config:
@@ -235,7 +236,6 @@ class Render:
         for i in list.values():
             if len(i)+7 > max_len:
                 max_len = len(i)+7
-        from collections import OrderedDict
         displayed_list = OrderedDict(sorted(list.items()))
         displayed_list.update({"all": "All"})
         table = ''
@@ -255,15 +255,22 @@ class Render:
 
     @staticmethod
     def print_selector(list, selected=[], displayed=False):
+        ordered_keys = OrderedDict(sorted(list.items()))
+        #print ordered_keys
         (menu, nbr_line, nbr_element) = Render.render_menu(list, selected)
         if displayed:
+            #pass
             print "\033[1A\033[2K\033[%sA" % (nbr_line+1)
         print menu
         select = raw_input("Please select element from 0 to " + str(nbr_element-1) + " (q to escape menu): ")
-        if select.isdigit() and 0 < int(select) < nbr_element-1:
-            selected.append(list.keys()[int(select)])
-        elif select.isdigit() and int(select) == nbr_element:
-            selected.append(int(select))
+        if select.isdigit() and 0 < int(select) < nbr_element-1 and ordered_keys.keys()[int(select)] not in selected:
+            selected.append(ordered_keys.keys()[int(select)])
+        elif select.isdigit() and int(select) == nbr_element and len(selected) < nbr_element:
+            selected = ordered_keys
+        elif select.isdigit() and 0 < int(select) < nbr_element-1 and ordered_keys.keys()[int(select)] in selected:
+            selected.remove(ordered_keys.keys()[int(select)])
+        elif select.isdigit() and int(select) == nbr_element and len(selected) == nbr_element:
+            selected = []
         if "q" in select:
             if len(list) in selected:
                 return list
@@ -416,6 +423,10 @@ class SSL:
         return Config().config.get("default", "certdir") + "/public/certificates/" + certid + ".crt"
 
     @staticmethod
+    def get_cert_privatekey_path(certid):
+        return Config().config.get("default", "certdir") + "/private/" + certid + ".privkey"
+
+    @staticmethod
     def check_ca_exist():
         return os.path.exists(SSL.get_ca_path()) and os.path.exists(SSL.get_ca_privatekey_path())
 
@@ -464,10 +475,23 @@ class SSL:
         f.write(priv_key_str)
 
     @staticmethod
+    def set_cert_privatekey(cert, pkey):
+        priv_key_str = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, pkey)
+        f = open(SSL.get_cert_privatekey_path(SSL.get_cert_id(cert)), 'w')
+        f.write(priv_key_str)
+
+    @staticmethod
     def set_ca(cert):
         ca_str = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
         f = open(SSL.get_ca_path(), 'w')
         f.write(ca_str)
+        f.close()
+
+    @staticmethod
+    def set_cert(cert):
+        cert_str = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        f = open(SSL.get_cert_path(SSL.get_cert_id(cert)), 'w')
+        f.write(cert_str)
         f.close()
 
     @staticmethod
@@ -566,6 +590,32 @@ class SSL:
         return d
 
     @staticmethod
+    def get_key_usage_from_profile(profile):
+        if Config().config.has_section("profile_" + profile):
+            keysusage = SSL.get_key_usage()
+            keys = str(Config().config.get("profile_" + profile, "keyusage")).split('|')
+            a_keys = []
+            for (k,v) in keysusage.iteritems():
+                if k in keys:
+                    a_keys.append(v)
+            return ', '.join(a_keys)
+        else:
+            return None
+
+    @staticmethod
+    def get_extended_key_usage_from_profile(profile):
+        if Config().config.has_section("profile_" + profile):
+            keysusage = SSL.get_extended_key_usage()
+            keys = str(Config().config.get("profile_" + profile, "extended")).split('|')
+            a_keys = []
+            for (k,v) in keysusage.iteritems():
+                if k in keys:
+                    a_keys.append(v)
+            return ', '.join(a_keys)
+        else:
+            return None
+
+    @staticmethod
     def display_cert_by_id(certid):
         SSL.display_cert(SSL.get_cert(certid))
 
@@ -580,7 +630,7 @@ class SSL:
         print "State : Expired" if cert.has_expired() else "State : OK"
         print "Validity"
         after_datetime = SSL.decode_time(cert.get_notAfter())
-        delta =  after_datetime.replace(tzinfo=None) - after_datetime.utcoffset() - dt.datetime.now()
+        delta =  after_datetime.replace(tzinfo=None) - after_datetime.utcoffset() - dt.datetime.utcnow()
         print "\tNot before : %s" % SSL.decode_time(cert.get_notBefore()).strftime("%c %Z")
         print "\tNot after : %s (%s)" % ( SSL.decode_time(cert.get_notAfter()).strftime("%c %Z"), delta)
         print "Algorithm"
