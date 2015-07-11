@@ -16,6 +16,7 @@ import smtplib
 from pytz import UTC
 import datetime as dt
 import OpenSSL.crypto
+import shlex, subprocess, re
 
 from scp import SCPClient
 from paramiko import SSHClient
@@ -43,12 +44,19 @@ class Config:
     config = None
     config_path = "/Users/ferezgaetan/PycharmProjects/manpki/etc/manpki.conf"
 
+    sections = ("default", "ca", "crl", "ocsp", "keyusage", "extended", "ldap", "smtp")
+
     def __init__(self):
         if not Config.config:
             if Secret.debug:
                 print "Read configuration file : " + Config.config_path
             Config.config = ConfigParser.ConfigParser()
             Config.config.read(Config.config_path)
+            if Secret.debug:
+                print "Verify all needed sections"
+            for sec in self.sections:
+                if not Config().config.has_section(sec):
+                    Config().config.add_section(sec)
 
     def write(self):
         # Writing our configuration file to 'example.cfg'
@@ -219,6 +227,60 @@ class Render:
                 table += " " + element[i] + (" "*(size_cols[i]-len(element[i])-1)) + "|"
             table += "\n"
         print table + line + "\n"
+
+    @staticmethod
+    def render_menu(list, selected=[]):
+        (row, cols) = Render.get_term_size()
+        max_len = 0
+        for i in list.values():
+            if len(i)+7 > max_len:
+                max_len = len(i)+7
+        displayed_list = list.values()
+        displayed_list.append("All")
+        table = ''
+        nbr_element = 0
+        element_by_line = cols / max_len
+        for (key, val) in enumerate(displayed_list):
+            nbr_element += 1
+            value_select = ' '
+            if key in selected:
+                value_select = '*'
+            to_add = "%s:[%s]%s" % (str(key).rjust(2), value_select, val)
+            table += to_add
+            table += ' '*(max_len-len(to_add))
+            if nbr_element % element_by_line == 0:
+                table += '\n'
+        return table[:-1], len(table[:-1].split('\n')), nbr_element
+
+    @staticmethod
+    def print_selector(list, selected=[], displayed=False):
+        (menu, nbr_line, nbr_element) = Render.render_menu(list, selected)
+        if displayed:
+            print "\033[1A\033[2K\033[%sA" % (nbr_line+1)
+        print menu
+        select = raw_input("Please select element from 0 to " + str(nbr_element-1) + " (q to escape menu): ")
+        if select.isdigit() and 0 < int(select) < nbr_element:
+            selected.append(int(select))
+        if "q" in select:
+            print len(list.values())
+            if len(list) in selected:
+                return list
+            else:
+                d = {}
+                for k, v in list.iteritems():
+                    for i in selected:
+                        if v in list.values()[i]:
+                            d.update({k: v})
+                return d
+
+                #return selected
+        else:
+            return Render.print_selector(list, selected, True)
+
+    @staticmethod
+    def get_term_size():
+        termsize = subprocess.check_output(['stty', 'size']).split()
+        return int(termsize[0]), int(termsize[1])
 
 
 class Show:
@@ -493,6 +555,14 @@ class SSL:
             return True
         else:
             return False
+
+    @staticmethod
+    def get_key_usage():
+        return Config().config.items("keyusage")
+
+    @staticmethod
+    def get_extended_key_usage():
+        return Config().config.items("extended")
 
     @staticmethod
     def display_cert_by_id(certid):

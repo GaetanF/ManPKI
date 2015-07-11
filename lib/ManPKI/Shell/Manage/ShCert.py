@@ -10,17 +10,24 @@ class ShCert(ShShell):
     def __init__(self, init_all=True):
         ShShell.__init__(self, init_all)
 
-    def do_disable(self, line):
-        Config().config.set("ocsp", "enable", "false")
-
-    def do_enable(self, line):
-        Config().config.set("ocsp", "enable", "true")
-
-    def do_uri(self, line):
-        Config().config.set("ocsp", "uri", line)
-
     def do_create(self, line):
         pass
+
+    def profile(self, line):
+        if line:
+            profile = line.split(' ')[0]
+        else:
+            profile = raw_input("Profile name : ")
+        keys_usage = extended_keys = []
+        if Config().config.has_section("profile_" + profile):
+            keys_usage = str(Config().config.get("profile_" + profile, "keyusage")).split('|')
+            extended_keys = str(Config().config.get("profile_" + profile, "extended")).split('|')
+        else:
+            Config().config.add_section("profile_"+profile)
+        keys_usage = Render.print_selector(SSL.get_key_usage(), keys_usage)
+        extended_keys = Render.print_selector(SSL.get_extended_key_usage(), extended_keys)
+        Config().config.set("profile_" + profile, "keyusage", '|'.join(keys_usage.keys()))
+        Config().config.set("profile_" + profile, "extended", '|'.join(extended_keys.keys()))
 
     def do_keysize(self, line):
         if re.match("^\d*$", line):
