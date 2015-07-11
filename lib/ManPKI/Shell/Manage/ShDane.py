@@ -20,7 +20,7 @@ class ShDane(ShShell):
         if " " in line and len(line.split(" ")) == 4:
             (proto, port, fqdn, certid) = line.split(" ")
             if proto in ("tcp", "udp"):
-                if int(port) > 1 and int(port) < 65535:
+                if 1 < int(port) < 65535:
                     if SSL.check_cert_exist(certid):
                         hash = hashlib.sha256(SSL.get_asn_cert_raw(certid)).hexdigest()
                         print "_%s._%s.%s.\tIN\tTLSA\t3 0 1 ( %s )" % (port, proto, fqdn, hash)

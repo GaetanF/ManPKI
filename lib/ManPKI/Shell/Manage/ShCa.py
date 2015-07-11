@@ -43,7 +43,7 @@ class ShCa(ShShell):
             (type, perimeter) = line.split(" ")
         else:
             type = line
-            perimeter=None
+            perimeter = None
         Config().config.set("ca", "isfinal", "false")
         if perimeter == "isfinal":
             Config().config.set("ca", "isfinal", "true")

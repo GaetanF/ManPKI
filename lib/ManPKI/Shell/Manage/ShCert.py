@@ -80,7 +80,7 @@ class ShCert(ShShell):
             i=0
             for cert in SSL.get_all_certificates():
                 if certid == cert['id']:
-                    i=1
+                    i = 1
                     SSL.display_cert(cert['cert'])
             if i == 0:
                 print "*** Certificate not found"
@@ -107,13 +107,13 @@ class ShCert(ShShell):
     def display_profile(self, profile):
         keys = str(Config().config.get("profile_" + profile, "keyusage")).split("|")
         print "\tKey Usage"
-        for (k,v) in SSL.get_key_usage().iteritems():
+        for (k, v) in SSL.get_key_usage().iteritems():
             if k in keys:
                 print "\t\t%s" % v
 
         keys = str(Config().config.get("profile_" + profile, "extended")).split("|")
         print "\tExtended Key Usage"
-        for (k,v) in SSL.get_extended_key_usage().iteritems():
+        for (k, v) in SSL.get_extended_key_usage().iteritems():
             if k in keys:
                 print "\t\t%s" % v
 

@@ -16,7 +16,7 @@ import smtplib
 from pytz import UTC
 import datetime as dt
 import OpenSSL.crypto
-import shlex, subprocess, re
+import subprocess
 from collections import OrderedDict
 
 from scp import SCPClient

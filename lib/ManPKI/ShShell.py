@@ -27,7 +27,7 @@ class ShShell(cmd.Cmd):
             self.get_sub_shell()
 
     def init_env_cmd(self):
-        if self.__class__.__bases__[0].__name__ is "Cmd" :
+        if self.__class__.__bases__[0].__name__ is "Cmd":
             self.intro  = "Welcome to the ManPKI console!"
         else:
             ShShell.path.append(self.__class__.__name__.lower()[2:])
