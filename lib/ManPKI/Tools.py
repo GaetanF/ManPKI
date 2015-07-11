@@ -235,17 +235,18 @@ class Render:
         for i in list.values():
             if len(i)+7 > max_len:
                 max_len = len(i)+7
-        displayed_list = list.values()
-        displayed_list.append("All")
+        from collections import OrderedDict
+        displayed_list = OrderedDict(sorted(list.items()))
+        displayed_list.update({"all": "All"})
         table = ''
         nbr_element = 0
         element_by_line = cols / max_len
-        for (key, val) in enumerate(displayed_list):
-            nbr_element += 1
+        for (key, val) in displayed_list.iteritems():
             value_select = ' '
             if key in selected:
                 value_select = '*'
-            to_add = "%s:[%s]%s" % (str(key).rjust(2), value_select, val)
+            to_add = "%s:[%s]%s" % (str(nbr_element).rjust(2), value_select, val)
+            nbr_element += 1
             table += to_add
             table += ' '*(max_len-len(to_add))
             if nbr_element % element_by_line == 0:
@@ -259,21 +260,15 @@ class Render:
             print "\033[1A\033[2K\033[%sA" % (nbr_line+1)
         print menu
         select = raw_input("Please select element from 0 to " + str(nbr_element-1) + " (q to escape menu): ")
-        if select.isdigit() and 0 < int(select) < nbr_element:
+        if select.isdigit() and 0 < int(select) < nbr_element-1:
+            selected.append(list.keys()[int(select)])
+        elif select.isdigit() and int(select) == nbr_element:
             selected.append(int(select))
         if "q" in select:
-            print len(list.values())
             if len(list) in selected:
                 return list
             else:
-                d = {}
-                for k, v in list.iteritems():
-                    for i in selected:
-                        if v in list.values()[i]:
-                            d.update({k: v})
-                return d
-
-                #return selected
+                return selected
         else:
             return Render.print_selector(list, selected, True)
 
@@ -297,11 +292,11 @@ class Show:
             self.call_command(self.parse_line(line))
 
     def parse_line(self, line):
-        arg_path = line.lower().split(" ")
+        arg_path = line.split(" ")
         if arg_path and len(arg_path)>0:
             command = 'show_' + '_'.join(arg_path)
             orig_command = command
-            while not hasattr(self, command) and command != "show":
+            while not hasattr(self, command.lower()) and command != "show":
                 command = "_".join(command.split("_")[:-1])
             if command == "show":
                 print "% Undefine command"
@@ -322,7 +317,7 @@ class Show:
                 if Secret.debug:
                     print "SHOW Call : " + command
                     print "SHOW Args : " + args
-                getattr(self, command)(args)
+                getattr(self, command.lower())(args)
             else:
                 if Secret.debug:
                     print "SHOW Call : " + command
@@ -558,11 +553,17 @@ class SSL:
 
     @staticmethod
     def get_key_usage():
-        return Config().config.items("keyusage")
+        d = {}
+        for e in Config().config.items("keyusage"):
+            d.update({e[0]: e[1]})
+        return d
 
     @staticmethod
     def get_extended_key_usage():
-        return Config().config.items("extended")
+        d = {}
+        for e in Config().config.items("extended"):
+            d.update({e[0]: e[1]})
+        return d
 
     @staticmethod
     def display_cert_by_id(certid):

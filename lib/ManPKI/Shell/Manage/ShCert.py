@@ -13,12 +13,13 @@ class ShCert(ShShell):
     def do_create(self, line):
         pass
 
-    def profile(self, line):
+    def do_profile(self, line):
         if line:
             profile = line.split(' ')[0]
         else:
             profile = raw_input("Profile name : ")
-        keys_usage = extended_keys = []
+        keys_usage = []
+        extended_keys = []
         if Config().config.has_section("profile_" + profile):
             keys_usage = str(Config().config.get("profile_" + profile, "keyusage")).split('|')
             extended_keys = str(Config().config.get("profile_" + profile, "extended")).split('|')
@@ -26,8 +27,8 @@ class ShCert(ShShell):
             Config().config.add_section("profile_"+profile)
         keys_usage = Render.print_selector(SSL.get_key_usage(), keys_usage)
         extended_keys = Render.print_selector(SSL.get_extended_key_usage(), extended_keys)
-        Config().config.set("profile_" + profile, "keyusage", '|'.join(keys_usage.keys()))
-        Config().config.set("profile_" + profile, "extended", '|'.join(extended_keys.keys()))
+        Config().config.set("profile_" + profile, "keyusage", '|'.join(keys_usage))
+        Config().config.set("profile_" + profile, "extended", '|'.join(extended_keys))
 
     def do_keysize(self, line):
         if re.match("^\d*$", line):
@@ -56,4 +57,30 @@ class ShCert(ShShell):
                 list.append((cert['id'], SSL.get_x509_name(cert['cert'].get_subject())))
             Render.print_table(('ID', 'Subject'), list)
 
+    def display_profile(self, profile):
+        keys = str(Config().config.get("profile_" + profile, "keyusage")).split("|")
+        print "\tKey Usage"
+        for (k,v) in SSL.get_key_usage().iteritems():
+            if k in keys:
+                print "\t\t%s" % v
 
+        keys = str(Config().config.get("profile_" + profile, "extended")).split("|")
+        print "\tExtended Key Usage"
+        for (k,v) in SSL.get_key_usage().iteritems():
+            if k in keys:
+                print "\t\t%s" % v
+
+    def show_profile(self, profile=None):
+        if profile:
+            if Config().config.has_section("profile_" + profile):
+                print "Profile %s" % profile
+                self.display_profile(profile)
+                print ""
+            else:
+                print "*** Profile does not exist"
+        else:
+            for sec in Config().config.sections():
+                if "profile_" in sec:
+                    print "Profile %s" % sec[8:]
+                    self.display_profile(sec[8:])
+                    print ""
