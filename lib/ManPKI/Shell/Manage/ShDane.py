@@ -4,6 +4,7 @@ from ShShell import ShShell
 from Tools import Config, SSL
 import hashlib
 
+
 class ShDane(ShShell):
 
     def __init__(self, init_all=True):
