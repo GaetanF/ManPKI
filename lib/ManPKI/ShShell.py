@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 import cmd
 import os
-import sys
+import sys, traceback
 import shlex
 from Tools import Config, Copy, Show
 from os.path import isfile, join, splitext
@@ -86,6 +86,8 @@ class ShShell(cmd.Cmd):
                     instance.cmdloop()
             except Exception, e:
                 print '*** error:', e
+                if Secret.debug:
+                    print traceback.format_exc()
         return handler_cmd
 
     @staticmethod
@@ -113,6 +115,11 @@ class ShShell(cmd.Cmd):
 
     ## Command definitions ##
     def do_exit(self, line):
+        if len(ShShell.path)>0:
+            ShShell.path.pop()
+        return True
+
+    def do_end(self, line):
         if len(ShShell.path)>0:
             ShShell.path.pop()
         return True
