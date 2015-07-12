@@ -495,16 +495,19 @@ class SSL:
         f.close()
 
     @staticmethod
+    def delete_cert(certid):
+        path_cert = SSL.get_cert_path(certid)
+        path_key = SSL.get_cert_privatekey_path(certid)
+        os.unlink(path_key)
+        os.unlink(path_cert)
+
+    @staticmethod
     def set_crl(crl):
         days = Config().config.getint("crl", "validity")
         crl_str = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_PEM, days=days)
         f = open(SSL.get_crl_path(), "w")
         f.write(crl_str)
         f.close()
-
-    @staticmethod
-    def revoke_cert(certid, reason):
-        pass
 
     @staticmethod
     def get_all_certificates():
@@ -576,6 +579,15 @@ class SSL:
             return False
 
     @staticmethod
+    def add_revoked(revoked):
+        if not SSL.check_crl_exist():
+             SSL.generate_crl()
+
+        crl = SSL.get_crl()
+        crl.add_revoked(revoked)
+        SSL.set_crl(crl)
+
+    @staticmethod
     def get_key_usage():
         d = {}
         for e in Config().config.items("keyusage"):
@@ -614,6 +626,21 @@ class SSL:
             return ', '.join(a_keys)
         else:
             return None
+
+    @staticmethod
+    def get_state_cert(cert):
+        state = "OK"
+        if SSL.check_crl_exist():
+            crl = SSL.get_crl()
+            for rev in crl.get_revoked():
+                serial = "{:x}".format(cert.get_serial_number()).upper()
+                if len(serial) % 2 != 0:
+                    serial = "0" + serial
+                if rev.get_serial() == serial:
+                    state = "Revoked"
+        if cert.has_expired():
+            state = "Expired"
+        return state
 
     @staticmethod
     def display_cert_by_id(certid):

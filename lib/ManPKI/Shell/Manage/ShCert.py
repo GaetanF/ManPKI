@@ -32,6 +32,30 @@ class ShCert(ShShell):
         mail = raw_input("Mail address : ")
         self.create_cert(cn, profile, mail)
 
+    def do_revoke(self, line):
+        if line:
+            i=0
+            for cert in SSL.get_all_certificates():
+                if line == cert['id']:
+                    i = 1
+                    print "Reason : "
+                    reasons = crypto.Revoked().all_reasons()
+                    for (k, v) in enumerate(reasons):
+                        print " %s: %s" % (k, v)
+                    res = raw_input("Select reason : ")
+                    if res.isdigit() and 0 <= int(res) < len(reasons):
+                        revoked = crypto.Revoked()
+                        revoked.set_reason(reasons[int(res)])
+                        revoked.set_serial(hex(cert['cert'].get_serial_number())[2:-1])
+                        revoked.set_rev_date(datetime.utcnow().strftime("%Y%m%d%H%M%S%Z")+"Z")
+                        SSL.add_revoked(revoked)
+                    else:
+                        print "*** Reason is not valid"
+            if i == 0:
+                print "*** Certificate not found"
+        else:
+            print "revoke <certid>"
+
     def do_profile(self, line):
         if line:
             profile = line.split(' ')[0]
@@ -85,9 +109,11 @@ class ShCert(ShShell):
             if i == 0:
                 print "*** Certificate not found"
         else:
+
             for cert in SSL.get_all_certificates():
-                list.append((cert['id'], SSL.get_x509_name(cert['cert'].get_subject())))
-            Render.print_table(('ID', 'Subject'), list)
+                state = SSL.get_state_cert(cert['cert'])
+                list.append((cert['id'], SSL.get_x509_name(cert['cert'].get_subject()), state))
+            Render.print_table(('ID', 'Subject', 'State'), list)
 
     def show_profile(self, profile=None):
         if profile:

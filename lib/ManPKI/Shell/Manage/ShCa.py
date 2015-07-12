@@ -156,4 +156,5 @@ class ShCa(ShShell):
     def resigned_all_cert(self):
         for certhash in SSL.get_all_certificates():
             cert_signed = SSL.sign(certhash['cert'], SSL.get_ca_privatekey(), Config().config.get("cert", "digest"))
+            SSL.delete_cert(certhash['id'])
             SSL.set_cert(cert_signed)
