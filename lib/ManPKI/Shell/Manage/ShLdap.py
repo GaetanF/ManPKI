@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config
+from Tools import Config, EventManager, LDAP
 import ldap
 import re
 
@@ -16,6 +16,7 @@ class ShLdap(ShShell):
 
     def do_enable(self, line):
         Config().config.set("ldap", "enable", "true")
+        LDAP.queue_all()
 
     def do_dn(self, line):
         (dn, password) = line.split(" ")

@@ -13,16 +13,17 @@ import os
 import string
 import hashlib
 import smtplib
-from pytz import UTC
 import datetime as dt
 import OpenSSL.crypto
 import subprocess
-from collections import OrderedDict
 
+from collections import OrderedDict
+from pytz import UTC
 from scp import SCPClient
 from paramiko import SSHClient
 from os.path import splitext
 from cStringIO import StringIO
+from queuelib import FifoDiskQueue
 
 import Exceptions.ProtocolException
 import Exceptions.CopyException
@@ -43,7 +44,7 @@ class Capturing(list):
 
 class Config:
     config = None
-    config_path = "/Users/ferezgaetan/PycharmProjects/manpki/etc/manpki.conf"
+    config_path = Secret.config_file
 
     sections = ("default", "ca", "crl", "ocsp", "keyusage", "extended", "ldap", "smtp", "cert")
 
@@ -175,6 +176,79 @@ class Copy:
         self.tmp_file.close()
 
 
+class EventManager:
+
+    class Event:
+        def __init__(self, functions):
+            if type(functions) is not list:
+                raise ValueError("functions parameter has to be a list")
+            self.functions = functions
+
+        def __iadd__(self, func):
+            self.functions.append(func)
+            return self
+
+        def __isub__(self, func):
+            self.functions.remove(func)
+            return self
+
+        def __call__(self, *args, **kvargs):
+            for func in self.functions:
+                func(*args, **kvargs)
+
+    @classmethod
+    def addEvent(cls, **kvargs):
+        """
+        addEvent( event1 = [f1,f2,...], event2 = [g1,g2,...], ... )
+        creates events using **kvargs to create any number of events. Each event recieves a list of functions,
+        where every function in the list recieves the same parameters.
+
+        Example:
+
+        def hello(): print "Hello ",
+        def world(): print "World"
+
+        EventManager.addEvent( salute = [hello] )
+        EventManager.salute += world
+
+        EventManager.salute()
+
+        Output:
+        Hello World
+        """
+        for key in kvargs.keys():
+            if type(kvargs[key]) is not list:
+                raise ValueError("value has to be a list")
+            else:
+                kvargs[key] = cls.Event(kvargs[key])
+
+        cls.__dict__.update(kvargs)
+
+    @staticmethod
+    def hasEvent(name):
+        return hasattr(EventManager, name)
+
+
+class LDAP:
+    def __init__(self):
+        """ Initialisation """
+        if not LDAP.queue:
+            LDAP.queue = FifoDiskQueue(Secret.spool_dir + "/ldap.queue")
+
+    def add_queue(self, cert):
+        LDAP.queue.push(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert))
+
+    def pop_queue(self):
+        return LDAP.queue.pop()
+
+    def queue_all(self):
+        if SSL.check_ca_exist():
+            LDAP.queue.push(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, SSL.get_ca()))
+            certs = SSL.get_all_certificates()
+            for cert in certs:
+                LDAP.queue.push(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert['cert']))
+
+
 class Mailer:
     def __init__(self):
         self.sender = Config().config.get("smtp", "from")
@@ -287,7 +361,7 @@ class Render:
 
 class Show:
 
-    base_dir = "/Users/ferezgaetan/PycharmProjects/manpki/lib/ManPKI/Shell"
+    base_dir = Secret.base_show
     identchars = IDENTCHARS
     list_functions = []
 

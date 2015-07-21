@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config, SSL
+from Tools import Config, SSL, EventManager
 import hashlib
 
 

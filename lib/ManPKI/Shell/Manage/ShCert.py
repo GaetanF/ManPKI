@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config, SSL, Render
+from Tools import Config, SSL, Render, EventManager, LDAP
 from datetime import datetime, timedelta
 from OpenSSL import crypto
 from time import time
@@ -101,11 +101,17 @@ class ShCert(ShShell):
     def show_cert(self, certid=None):
         list = []
         if certid:
+            rawmode = False
+            if "_" in certid and certid.split("_")[1] == "raw":
+                rawmode = True
+                certid = certid.split("_")[0]
             i=0
             for cert in SSL.get_all_certificates():
                 if certid == cert['id']:
                     i = 1
                     SSL.display_cert(cert['cert'])
+                    if rawmode:
+                        print crypto.dump_certificate(crypto.FILETYPE_PEM, cert['cert'])
             if i == 0:
                 print "*** Certificate not found"
         else:
@@ -194,3 +200,6 @@ class ShCert(ShShell):
         cert_signed = SSL.sign(cert, SSL.get_ca_privatekey(), Config().config.get("cert", "digest"))
         SSL.set_cert(cert_signed)
         SSL.set_cert_privatekey(cert_signed, pkey)
+
+        if Config().config.getboolean("ldap", "enable"):
+                LDAP.add_queue(ca_signed)

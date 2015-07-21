@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config
+from Tools import Config, EventManager
 import re
 
 

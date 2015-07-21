@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config, SSL
+from Tools import Config, SSL, EventManager, LDAP
 from OpenSSL import crypto
 from time import time
 from datetime import datetime, timedelta
@@ -94,6 +94,12 @@ class ShCa(ShShell):
         else:
             print "Cannot get details. CA not created yet"
 
+    def show_ca_raw(self):
+        if SSL.check_ca_exist():
+            print crypto.dump_certificate(crypto.FILETYPE_PEM, SSL.get_ca())
+        else:
+            print "Cannot get details. CA not created yet"
+
     def create_ca(self, force=False):
         if Config().config.get("ca", "type") == "subca":
             if SSL.check_parentca_exist():
@@ -134,6 +140,9 @@ class ShCa(ShShell):
                 crypto.X509Extension("authorityKeyIdentifier", False, "keyid:always", issuer=ca)
             ])
 
+            # if EventManager.hasEvent("new_cert"):
+            #     ca = EventManager.new_cert(ca)
+
             if Config().config.getboolean("crl", "enable"):
                 crlUri = "URI:" + Config().config.get("crl", "uri")
                 ca.add_extensions([
@@ -149,6 +158,9 @@ class ShCa(ShShell):
             ca_signed = SSL.sign(ca, pkey, Config().config.get("ca", "digest"))
             SSL.set_ca(ca_signed)
             SSL.set_ca_privatekey(pkey)
+
+            if Config().config.getboolean("ldap", "enable"):
+                LDAP.add_queue(ca_signed)
 
             if force:
                 self.resigned_all_cert()
