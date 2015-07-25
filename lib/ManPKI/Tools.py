@@ -15,6 +15,7 @@ import hashlib
 import smtplib
 import datetime as dt
 import OpenSSL.crypto
+import ssl
 import subprocess
 import ldap
 import ldap.modlist
@@ -317,14 +318,39 @@ class LDAP:
     def add_cert(self, cert):
         l = self.get_conn()
         dn = self._convert_cert_to_dn(cert)
+        objectclass = ['top']
+        if "people" in dn.lower() or "user" in dn.lower():
+            objectclass.append('person')
+        else:
+            objectclass.append('device')
+        certpem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
         attrs = {}
-        attrs['objectclass'] = ['top', 'device', 'pkiUser']
-        attrs['cn'] = cert.get_subject().cn
-        ldif = ldap.modlist.addModlist(attrs)
-        l.add_s(dn, ldif)
+        if cert.get_subject() == SSL.get_ca().get_subject():
+            objectclass.append('pkiCA')
+            key = "cACertificate"
+            #crlpem = open(SSL.get_crl_path(), "r").read()
+            #attrs['certificateRevocationList;binary'] = ssl.PEM_cert_to_DER_cert(crlpem)
+        else:
+            objectclass.append('pkiUser')
+            key = "userCertificate"
+        print objectclass
+        add_record = [
+            ('objectclass', objectclass),
+            ('cn', [str(cert.get_subject().CN)]),
+            (key + ';binary', [ssl.PEM_cert_to_DER_cert(certpem)])
+        ]
+        l.add_s(dn, add_record)
 
     def update_cert(self, cert):
-        pass
+        l = self.get_conn()
+        dn = self._convert_cert_to_dn(cert)
+        if "people" in dn.lower() or "user" in dn.lower():
+            objectclass = 'person'
+        else:
+            objectclass = 'device'
+        certpem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+        mod_attrs = [( ldap.MOD_REPLACE, 'userCertificate;binary', ssl.PEM_cert_to_DER_cert(certpem))]
+        l.modify_s(dn, mod_attrs)
 
     def delete_cert(self, cert):
         if self.check_dn_exist(cert):
@@ -337,11 +363,14 @@ class LDAP:
                 cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, self.pop_queue())
                 state = SSL.get_state_cert(cert)
                 if 'Revoked' in state:
+                    print "Delete revoke cert in ldap " + self._convert_cert_to_dn(cert)
                     self.delete_cert(cert)
                 else:
-                    if self.check_cert_in_ldap(cert):
+                    if self.check_dn_exist(cert):
+                        print "Update cert in ldap " + self._convert_cert_to_dn(cert)
                         self.update_cert(cert)
                     else:
+                        print "Add cert in ldap " + self._convert_cert_to_dn(cert)
                         self.add_cert(cert)
 
 
