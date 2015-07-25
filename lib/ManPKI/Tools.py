@@ -16,6 +16,9 @@ import smtplib
 import datetime as dt
 import OpenSSL.crypto
 import subprocess
+import ldap
+import ldap.modlist
+import base64
 
 from collections import OrderedDict
 from pytz import UTC
@@ -24,9 +27,16 @@ from paramiko import SSHClient
 from os.path import splitext
 from cStringIO import StringIO
 from queuelib import FifoDiskQueue
+from Crypto.Cipher import Blowfish
 
 import Exceptions.ProtocolException
 import Exceptions.CopyException
+
+from cryptography.hazmat.bindings.openssl.binding import Binding
+binding = Binding()
+ffi = binding.ffi
+lib = binding.lib
+
 
 IDENTCHARS = string.ascii_letters + string.digits + '_'
 
@@ -232,7 +242,7 @@ class EventManager:
 class LDAP:
     def __init__(self):
         """ Initialisation """
-        if not LDAP.queue:
+        if not hasattr(LDAP, 'queue'):
             LDAP.queue = FifoDiskQueue(Secret.spool_dir + "/ldap.queue")
 
     def add_queue(self, cert):
@@ -247,6 +257,92 @@ class LDAP:
             certs = SSL.get_all_certificates()
             for cert in certs:
                 LDAP.queue.push(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert['cert']))
+
+    def _convert_cert_to_dn(self, cert, depth=None):
+        subj = cert.get_subject().get_components()
+        list_sub = []
+        dn_allows = ('C', 'ST', 'L', 'OU', 'O', 'CN')
+        for tup in subj:
+            if tup[0] in dn_allows:
+                list_sub.append("=".join(tup))
+        list_sub.reverse()
+        return ",".join(list_sub[depth:])
+
+    def get_password(self):
+        crypted_pass = Config().config.get("ldap", "password")
+        bl = Blowfish.new(Secret.appSecret, Blowfish.MODE_CFB, base64.b64decode(Secret.IV))
+        return bl.decrypt(base64.b64decode(crypted_pass))
+
+    def set_password(self, password):
+        bl = Blowfish.new(Secret.appSecret, Blowfish.MODE_CFB, base64.b64decode(Secret.IV))
+        crypted_pass = base64.b64encode(bl.encrypt(password))
+        Config().config.set("ldap", "password", crypted_pass)
+
+    def get_conn(self):
+        l = ldap.initialize(Config().config.get("ldap", "server"))
+        l.simple_bind(Config().config.get("ldap", "dn"), self.get_password())
+        return l
+
+    def check_dn_exist(self, cert, depth=None):
+        l = self.get_conn()
+        try:
+            dn = self._convert_cert_to_dn(cert, depth)
+            l.search_s(dn, ldap.SCOPE_SUBTREE, '(cn=*)')
+            exist_object = True
+        except ldap.NO_SUCH_OBJECT:
+            exist_object = False
+        return exist_object
+
+    def check_requirements(self):
+        if not SSL.check_ca_exist():
+            print "CA doesn't exist"
+            return False
+        if self.check_dn_exist(SSL.get_ca(), depth=2):
+            if not self.check_dn_exist(SSL.get_ca(), depth=1):
+                dn = self._convert_cert_to_dn(SSL.get_ca(), depth=1)
+                ou_name = dn.split(",")[0].split("=")[1]
+                self.create_ou(dn, ou_name)
+            return True
+        else:
+            return False
+
+    def create_ou(self, dn, name):
+        l = self.get_conn()
+        attrs = {}
+        attrs['objectclass'] = ['top', 'organizationalUnit']
+        attrs['ou'] = name
+        ldif = ldap.modlist.addModlist(attrs)
+        l.add_s(dn, ldif)
+
+    def add_cert(self, cert):
+        l = self.get_conn()
+        dn = self._convert_cert_to_dn(cert)
+        attrs = {}
+        attrs['objectclass'] = ['top', 'device', 'pkiUser']
+        attrs['cn'] = cert.get_subject().cn
+        ldif = ldap.modlist.addModlist(attrs)
+        l.add_s(dn, ldif)
+
+    def update_cert(self, cert):
+        pass
+
+    def delete_cert(self, cert):
+        if self.check_dn_exist(cert):
+            l = self.get_conn()
+            l.delete_s(self._convert_cert_to_dn(cert))
+
+    def publish(self):
+        if self.check_requirements():
+            while LDAP.queue:
+                cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, self.pop_queue())
+                state = SSL.get_state_cert(cert)
+                if 'Revoked' in state:
+                    self.delete_cert(cert)
+                else:
+                    if self.check_cert_in_ldap(cert):
+                        self.update_cert(cert)
+                    else:
+                        self.add_cert(cert)
 
 
 class Mailer:

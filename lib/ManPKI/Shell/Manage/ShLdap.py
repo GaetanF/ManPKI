@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config, EventManager, LDAP
+from Tools import Config, EventManager, LDAP, SSL
 import ldap
 import re
 
@@ -20,18 +20,18 @@ class ShLdap(ShShell):
 
     def do_dn(self, line):
         (dn, password) = line.split(" ")
+        l = ldap.initialize(Config().config.get("ldap", "server"))
         try:
-            l = ldap.initialize(line)
-            try:
-                l.bind_s(dn, password)
-            except ldap.INVALID_CREDENTIALS:
-                print "Your username or password is incorrect."
-
-            except ldap.LDAPError, e:
-                if type(e.message) == dict and e.message.has_key('desc'):
-                    print e.message['desc']
-                else:
-                    print e
+            l.bind_s(dn, password)
+            Config().config.set("ldap", "dn", dn)
+            LDAP().set_password(password)
+        except ldap.INVALID_CREDENTIALS:
+            print "Your username or password is incorrect."
+        except ldap.LDAPError, e:
+            if type(e.message) == dict and e.message.has_key('desc'):
+                print e.message['desc']
+            else:
+                print e
         finally:
             l.unbind()
 
@@ -63,7 +63,30 @@ class ShLdap(ShShell):
             print "'schedule' can only be call in scheduled publish mode"
 
     def do_publish(self, line):
-        print "Publish to LDAP"
+        if Config().config.getboolean("ldap", "enable"):
+            if "never" not in Config().config.get("ldap", "mode"):
+                print "Publish to LDAP"
+                if "all" in line:
+                    LDAP().queue_all()
+                if LDAP().publish():
+                    print "done"
+            else:
+                print "LDAP configured in Never publish mode"
+        else:
+            print "LDAP service not enable"
+
+    def do_test(self, line):
+        print LDAP().get_password()
+        try:
+            if LDAP().check_dn_exist(SSL.get_ca()):
+                print "Connection and require object successful"
+            elif LDAP().check_dn_exist(SSL.get_ca(), depth=1):
+                print "Connection successful. Required object need to be created"
+            else:
+                print "Connection OK. Require Base DN not exist"
+        except ldap.CONNECT_ERROR:
+            print "Unable to connect"
+
 
     def show_ldap(self):
         for name in Config().config.options("ldap"):
