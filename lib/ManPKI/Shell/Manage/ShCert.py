@@ -72,7 +72,12 @@ class ShCert(ShShell):
         extended_keys = Render.print_selector(SSL.get_extended_key_usage(), extended_keys)
         Config().config.set("profile_" + profile, "keyusage", '|'.join(keys_usage))
         Config().config.set("profile_" + profile, "extended", '|'.join(extended_keys))
-
+        rep = raw_input("Use LDAP if enable to search subject (y/n) : ")
+        if "y" in rep:
+            filter = raw_input("LDAP Filter : ")
+            Config().config.set("profile_" + profile, "ldap", filter)
+        else:
+            Config().config.set("profile_" + profile, "ldap", "false")
 
     def do_digest(self, line):
         if line in ("md2", "md5", "mdc2", "rmd160", "sha", "sha1", "sha224", "sha256", "sha384", "sha512"):
@@ -157,6 +162,8 @@ class ShCert(ShShell):
 
         ca = SSL.get_ca()
         cert = SSL.create_cert(pkey)
+        if Config().config.get("ldap", "enable") and "false" not in Config().config.get("profile_" + profile, "ldap"):
+            print "Search in LDAP"
         subject = Config().config.get("ca", "base_cn") + "/CN=" + name
         subject_x509 = SSL.parse_str_to_x509Name(subject, cert.get_subject())
 
@@ -202,4 +209,4 @@ class ShCert(ShShell):
         SSL.set_cert_privatekey(cert_signed, pkey)
 
         if Config().config.getboolean("ldap", "enable"):
-                LDAP.add_queue(ca_signed)
+                LDAP.add_queue(cert_signed)
