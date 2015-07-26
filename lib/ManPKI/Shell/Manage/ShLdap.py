@@ -1,7 +1,8 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config, EventManager, LDAP, SSL
+from Tools import Config, EventManager, LDAP, SSL, Cron
+import Secret
 import ldap
 import re
 
@@ -10,13 +11,16 @@ class ShLdap(ShShell):
 
     def __init__(self, init_all=True):
         ShShell.__init__(self, init_all)
+        if not Cron().hasjob("ldap"):
+            Cron().add("ldap", Secret.base_dir + "/lib/ManPKI/Cron/publish_ldap.py", "5m", False)
 
     def do_disable(self, line):
         Config().config.set("ldap", "enable", "false")
+        Cron().disable("ldap")
 
     def do_enable(self, line):
         Config().config.set("ldap", "enable", "true")
-        LDAP.queue_all()
+        LDAP().queue_all()
 
     def do_dn(self, line):
         (dn, password) = line.split(" ")
@@ -50,6 +54,10 @@ class ShLdap(ShShell):
     def do_mode(self, line):
         if line in ("never", "ondemand", "schedule"):
             Config().config.set("ldap", "mode", line)
+            if line in "schedule":
+                Cron().enable("ldap")
+            else:
+                Cron().disable("ldap")
         else:
             print "Invalid LDAP publish mode (never,ondemand,schedule)"
 
@@ -57,6 +65,7 @@ class ShLdap(ShShell):
         if Config().config.get("ldap", "mode") == "schedule":
             if re.match("^\d+[mhd]$", line):
                 Config().config.set("ldap", "schedule", line)
+                Cron().set_schedule("ldap", line)
             else:
                 print "Schedule are not valid"
         else:

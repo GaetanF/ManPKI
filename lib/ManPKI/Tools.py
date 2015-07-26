@@ -15,11 +15,11 @@ import hashlib
 import smtplib
 import datetime as dt
 import OpenSSL.crypto
-import ssl
 import subprocess
 import ldap
 import ldap.modlist
 import base64
+import re
 
 from collections import OrderedDict
 from pytz import UTC
@@ -29,6 +29,7 @@ from os.path import splitext
 from cStringIO import StringIO
 from queuelib import FifoDiskQueue
 from Crypto.Cipher import Blowfish
+from crontab import CronTab
 
 import Exceptions.ProtocolException
 import Exceptions.CopyException
@@ -185,6 +186,64 @@ class Copy:
             print Exceptions.ProtocolException("Unknown protocol")
 
         self.tmp_file.close()
+
+
+class Cron:
+
+    def __init__(self):
+        Cron.crontab = CronTab(user=True)
+
+    def add(self, id, command, schedule, enable=True):
+        job = Cron.crontab.new(command=command, comment=id)
+        job.schedule(schedule)
+        job.enable(enable)
+        Cron.crontab.write()
+
+    def enable(self, id):
+        job = Cron.crontab.find_comment(id).next()
+        job.enable(True)
+        Cron.crontab.write()
+
+    def disable(self, id):
+        job = Cron.crontab.find_comment(id).next()
+        job.enable(False)
+        Cron.crontab.write()
+
+    def parse_str_to_crontime(self, str):
+        m = re.match("([0-9]*)m", str)
+        if m:
+            minute = '*/' + m.group(1)
+        else:
+            minute = '*'
+        m = re.match("([0-9]*)h", str)
+        if m:
+            hour = '*/' + m.group(1)
+        else:
+            hour = '*'
+        m = re.match("([0-9]*)d", str)
+        if m:
+            day = '*/' + m.group(1)
+        else:
+            day = '*'
+        m = re.match("([0-9]*)M", str)
+        if m:
+            month = '*/' + m.group(1)
+        else:
+            month = '*'
+        return "%s %s %s %s *" % (minute, hour, day, month)
+
+    def set_schedule(self, id, schedule):
+        job = Cron.crontab.find_comment(id).next()
+        sched = self.parse_str_to_crontime(schedule)
+        job.setall(sched)
+        Cron.crontab.write()
+
+    def hasjob(self, id):
+        try:
+            Cron.crontab.find_comment(id).next()
+            return True
+        except StopIteration:
+            return False
 
 
 class EventManager:
