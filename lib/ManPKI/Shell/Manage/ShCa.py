@@ -1,7 +1,7 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config, SSL, EventManager, LDAP
+from Tools import Config, SSL, EventManager, LDAP, API
 from OpenSSL import crypto
 from time import time
 from datetime import datetime, timedelta
@@ -66,7 +66,11 @@ class ShCa(ShShell):
 
     def do_parentca(self, line):
         if Config().config.get("ca", "type") is "subca":
-            Config().config.set("ca", "parentca", line)
+            api = API(line)
+            if api.has_valid():
+                Config().config.set("ca", "parentca", line)
+            else:
+                print "*** ParentCA must be valid ManPKI host"
         else:
             print "*** Only SubCA can have a parent ca"
 
@@ -102,68 +106,81 @@ class ShCa(ShShell):
 
     def create_ca(self, force=False):
         if Config().config.get("ca", "type") == "subca":
-            if SSL.check_parentca_exist():
-                pass
-            else:
-                print "*** Parent CA must be exist before"
-        else:
-            before = datetime.utcnow()
-            after = before + timedelta(days=Config().config.getint("ca", "validity"))
+            api = API(Config().config.get("ca", "parentca"))
+        before = datetime.utcnow()
+        after = before + timedelta(days=Config().config.getint("ca", "validity"))
 
-            pkey = SSL.create_key(Config().config.getint("ca", "key_size"))
+        pkey = SSL.create_key(Config().config.getint("ca", "key_size"))
 
-            ca = SSL.create_cert(pkey)
-            subject = Config().config.get("ca", "base_cn") + "/CN=" + Config().config.get("ca", "name")
-            subject_x509 = SSL.parse_str_to_x509Name(subject, ca.get_subject())
+        ca = SSL.create_cert(pkey)
+        subject = Config().config.get("ca", "base_cn") + "/CN=" + Config().config.get("ca", "name")
+        subject_x509 = SSL.parse_str_to_x509Name(subject, ca.get_subject())
+        if Config().config.get("ca", "type") == "rootca":
             issuer_x509 = SSL.parse_str_to_x509Name(subject, ca.get_issuer())
 
-            if Config().config.get("ca", "email"):
-                subject_x509.emailAddress = Config().config.get("ca", "email")
-                issuer_x509.emailAddress = Config().config.get("ca", "email")
+        if Config().config.get("ca", "email"):
+            subject_x509.emailAddress = Config().config.get("ca", "email")
 
-            ca.set_subject(subject_x509)
+        if Config().config.get("ca", "type") == "rootca":
+            issuer_x509.emailAddress = Config().config.get("ca", "email")
+
+        ca.set_subject(subject_x509)
+        if Config().config.get("ca", "type") == "rootca":
             ca.set_issuer(issuer_x509)
-            ca.set_notBefore(before.strftime("%Y%m%d%H%M%S%Z")+"Z")
-            ca.set_notAfter(after.strftime("%Y%m%d%H%M%S%Z")+"Z")
-            ca.set_serial_number(int(time() * 1000000))
-            ca.set_version(2)
+        ca.set_notBefore(before.strftime("%Y%m%d%H%M%S%Z")+"Z")
+        ca.set_notAfter(after.strftime("%Y%m%d%H%M%S%Z")+"Z")
+        ca.set_serial_number(int(time() * 1000000))
+        ca.set_version(2)
 
-            bsConst = "CA:TRUE"
-            if Config().config.getboolean("ca", "isfinal"):
-                bsConst += ", pathlen:0"
-            ca.add_extensions([
-                crypto.X509Extension("basicConstraints", True, bsConst),
-                crypto.X509Extension("keyUsage", True, "keyCertSign, cRLSign"),
-                crypto.X509Extension("subjectKeyIdentifier", False, "hash", subject=ca),
-            ])
+        bsConst = "CA:TRUE"
+        if Config().config.getboolean("ca", "isfinal"):
+            bsConst += ", pathlen:0"
+        ca.add_extensions([
+            crypto.X509Extension("basicConstraints", True, bsConst),
+            crypto.X509Extension("keyUsage", True, "keyCertSign, cRLSign"),
+            crypto.X509Extension("subjectKeyIdentifier", False, "hash", subject=ca),
+        ])
+        if Config().config.get("ca", "type") == "rootca":
             ca.add_extensions([
                 crypto.X509Extension("authorityKeyIdentifier", False, "keyid:always", issuer=ca)
             ])
 
-            # if EventManager.hasEvent("new_cert"):
-            #     ca = EventManager.new_cert(ca)
+        # if EventManager.hasEvent("new_cert"):
+        #     ca = EventManager.new_cert(ca)
 
-            if Config().config.getboolean("crl", "enable"):
-                crlUri = "URI:" + Config().config.get("crl", "uri")
-                ca.add_extensions([
-                    crypto.X509Extension("crlDistributionPoints", False, crlUri)
-                ])
+        if Config().config.getboolean("crl", "enable"):
+            crlUri = "URI:" + Config().config.get("crl", "uri")
+            ca.add_extensions([
+                crypto.X509Extension("crlDistributionPoints", False, crlUri)
+            ])
 
-            if Config().config.getboolean("ocsp", "enable"):
-                ocspUri = "OCSP;URI:" + Config().config.get("ocsp", "uri")
-                ca.add_extensions([
-                    crypto.X509Extension("authorityInfoAccess", False, ocspUri)
-                ])
+        if Config().config.getboolean("ocsp", "enable"):
+            ocspUri = "OCSP;URI:" + Config().config.get("ocsp", "uri")
+            ca.add_extensions([
+                crypto.X509Extension("authorityInfoAccess", False, ocspUri)
+            ])
 
+        if Config().config.get("ca", "type") == "subca":
+            data = api.push("ca_sign", {
+                "digest": Config().config.get("ca", "digest"),
+                "cert": api.encode_cert(ca)
+            })
+            if data['state'] == 'OK':
+                ca_signed = api.decode_cert(data['response'])
+            else:
+                print "Error during sign from remote API of Parent CA"
+                return False
+        else:
             ca_signed = SSL.sign(ca, pkey, Config().config.get("ca", "digest"))
-            SSL.set_ca(ca_signed)
-            SSL.set_ca_privatekey(pkey)
 
-            if Config().config.getboolean("ldap", "enable"):
-                LDAP.add_queue(ca_signed)
+        SSL.set_ca(ca_signed)
+        SSL.set_ca_privatekey(pkey)
 
-            if force:
-                self.resigned_all_cert()
+        if Config().config.getboolean("ldap", "enable"):
+            LDAP.add_queue(ca_signed)
+
+        if force:
+            self.resigned_all_cert()
 
     def resigned_all_cert(self):
         for certhash in SSL.get_all_certificates():

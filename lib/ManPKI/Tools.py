@@ -10,9 +10,11 @@ import shutil
 import urllib
 import ftplib
 import os
+import json
 import string
 import hashlib
 import smtplib
+import StringIO
 import datetime as dt
 import OpenSSL.crypto
 import subprocess
@@ -20,6 +22,8 @@ import ldap
 import ldap.modlist
 import base64
 import re
+import httplib
+import cPickle
 
 from collections import OrderedDict
 from pytz import UTC
@@ -41,6 +45,65 @@ lib = binding.lib
 
 
 IDENTCHARS = string.ascii_letters + string.digits + '_'
+
+
+class API:
+
+    def __init__(self, host, port=2372):
+        if ':' in host:
+            port = host.split(':')[1]
+            host = host.split(':')[0]
+        self.host = host
+        self.port = port
+
+    def connect(self):
+        self.conn = httplib.HTTPSConnection(self.host, self.port, timeout=10)
+        self.conn.connect()
+
+    def has_valid(self):
+        try:
+            self.connect()
+            return True
+        except Exception:
+            return False
+
+    def request(self, method, command, data=''):
+        self.connect()
+        self.conn.putrequest(method, "/%s?token=%s" % (command, Secret.api_token), '', )
+        self.conn.putheader('User-Agent', 'ManPKI/1.0')
+        self.conn.endheaders()
+        self.conn.send(data)
+        r1 = self.conn.getresponse()
+        if r1.status == 200:
+            response = r1.read()
+            print response
+            data = json.JSONDecoder().decode(response)
+            if 'state' in data.keys() and 'response' in data.keys():
+                return data
+            else:
+                return {'state': 'NOK', 'response': None}
+        else:
+            return {'state': 'NOK', 'response': None}
+
+    def get(self, command):
+        return self.request('GET', command)
+
+    def push(self, command, data):
+        return self.request('POST', command, json.JSONEncoder().encode(data))
+
+    def encode_object(self, obj):
+        output = StringIO()
+        cPickle.dump(obj, output)
+        return base64.encode(output.getvalue())
+
+    def decode_object(self, str):
+        return cPickle.load(str)
+
+    def encode_cert(self, obj):
+        return base64.b64encode(OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, obj))
+
+    def decode_cert(self, str):
+        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, base64.b64decode(str))
 
 
 class Capturing(list):
@@ -873,6 +936,12 @@ class SSL:
     @staticmethod
     def create_cert(key):
         cert = OpenSSL.crypto.X509()
+        cert.set_pubkey(key)
+        return cert
+
+    @staticmethod
+    def create_request(key):
+        cert = OpenSSL.crypto.X509Req()
         cert.set_pubkey(key)
         return cert
 
