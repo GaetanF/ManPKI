@@ -195,7 +195,7 @@ class Cron:
 
     def add(self, id, command, schedule, enable=True):
         job = Cron.crontab.new(command=command, comment=id)
-        job.schedule(schedule)
+        job.schedule(self.parse_str_to_crontime(schedule))
         job.enable(enable)
         Cron.crontab.write()
 
@@ -234,8 +234,7 @@ class Cron:
 
     def set_schedule(self, id, schedule):
         job = Cron.crontab.find_comment(id).next()
-        sched = self.parse_str_to_crontime(schedule)
-        job.setall(sched)
+        job.setall(self.parse_str_to_crontime(schedule))
         Cron.crontab.write()
 
     def hasjob(self, id):

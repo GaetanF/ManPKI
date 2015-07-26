@@ -1,7 +1,8 @@
 __author__ = 'ferezgaetan'
 
 from ShShell import ShShell
-from Tools import Config, EventManager
+from Tools import Config, EventManager, Cron
+import Secret
 import re
 
 
@@ -9,16 +10,21 @@ class ShCrl(ShShell):
 
     def __init__(self, init_all=True):
         ShShell.__init__(self, init_all)
+        if not Cron().hasjob("crl"):
+            Cron().add("crl", Secret.base_dir + "/lib/ManPKI/Cron/generate_crl.py", "5m", False)
 
     def do_disable(self, line):
         Config().config.set("crl", "enable", "false")
+        Cron().disable("crl")
 
     def do_enable(self, line):
         Config().config.set("crl", "enable", "true")
+        Cron().enable("crl")
 
     def do_validity(self, line):
         if re.match("^\d*$", line):
             Config().config.set("crl", "validity", line)
+            Cron().set_schedule("crl", str(int(line)-1) + "d")
         else:
             print "*** CRL Validity is not valid"
 
