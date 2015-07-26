@@ -294,6 +294,17 @@ class LDAP:
             exist_object = False
         return exist_object
 
+    def get_dn(self, dn, filter='(objectclass=*)', attributes=None):
+        l = self.get_conn()
+        try:
+            res = l.search_s(dn, ldap.SCOPE_SUBTREE, filter, attributes)
+        except ldap.NO_SUCH_OBJECT:
+            res = None
+        return res
+
+    def get_count_result(self):
+        pass
+
     def check_requirements(self):
         if not SSL.check_ca_exist():
             print "CA doesn't exist"
@@ -323,33 +334,59 @@ class LDAP:
             objectclass.append('person')
         else:
             objectclass.append('device')
-        certpem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-        attrs = {}
+        certpem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert)
+        add_record = []
         if cert.get_subject() == SSL.get_ca().get_subject():
             objectclass.append('pkiCA')
             key = "cACertificate"
-            #crlpem = open(SSL.get_crl_path(), "r").read()
-            #attrs['certificateRevocationList;binary'] = ssl.PEM_cert_to_DER_cert(crlpem)
+            crl = SSL.get_crl_binary()
+            add_record.append(('certificateRevocationList;binary', [crl]))
         else:
             objectclass.append('pkiUser')
             key = "userCertificate"
-        print objectclass
-        add_record = [
-            ('objectclass', objectclass),
-            ('cn', [str(cert.get_subject().CN)]),
-            (key + ';binary', [ssl.PEM_cert_to_DER_cert(certpem)])
-        ]
+        add_record.append(('objectclass', objectclass))
+        add_record.append(('cn', [str(cert.get_subject().CN)]))
+        add_record.append((key + ';binary', [certpem]))
         l.add_s(dn, add_record)
 
     def update_cert(self, cert):
         l = self.get_conn()
         dn = self._convert_cert_to_dn(cert)
-        if "people" in dn.lower() or "user" in dn.lower():
-            objectclass = 'person'
+        res = self.get_dn(dn)
+        if len(res) != 1:
+            print "One cert must be found"
+            return False
+        oc = res[0][1]['objectClass']
+        mod_attrs = []
+        certpem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert)
+        if cert.get_subject() == SSL.get_ca().get_subject():
+            key = "cACertificate"
+            crl = SSL.get_crl_binary()
+            if 'pkiCA' not in oc:
+                oc.append('pkiCA')
+                mod_attrs.append((ldap.MOD_REPLACE, 'objectClass', oc))
+                mod_attrs.append((ldap.MOD_ADD, 'certificateRevocationList;binary', [crl]))
+                mod_attrs.append((ldap.MOD_ADD, key + ';binary', certpem))
+            else:
+                if 'certificateRevocationList;binary' in res[0][1].keys():
+                    mod_attrs.append((ldap.MOD_REPLACE, 'certificateRevocationList;binary', [crl]))
+                else:
+                    mod_attrs.append((ldap.MOD_ADD, 'certificateRevocationList;binary', [crl]))
+                if key + ';binary' in res[0][1].keys():
+                    mod_attrs.append(( ldap.MOD_REPLACE, key + ';binary', certpem))
+                else:
+                    mod_attrs.append(( ldap.MOD_ADD, key + ';binary', certpem))
         else:
-            objectclass = 'device'
-        certpem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-        mod_attrs = [( ldap.MOD_REPLACE, 'userCertificate;binary', ssl.PEM_cert_to_DER_cert(certpem))]
+            key = "userCertificate"
+            if 'pkiUser' not in oc:
+                oc.append('pkiUser')
+                mod_attrs.append((ldap.MOD_REPLACE, 'objectClass', oc))
+                mod_attrs.append((ldap.MOD_ADD, key + ';binary', certpem))
+            else:
+                if key + ';binary' in res[0][1].keys():
+                    mod_attrs.append(( ldap.MOD_REPLACE, key + ';binary', certpem))
+                else:
+                    mod_attrs.append(( ldap.MOD_ADD, key + ';binary', certpem))
         l.modify_s(dn, mod_attrs)
 
     def delete_cert(self, cert):
@@ -658,6 +695,13 @@ class SSL:
     @staticmethod
     def get_crl():
         return OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_crl_path(), "rt").read())
+
+    @staticmethod
+    def get_crl_binary():
+        crl = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_crl_path(), "rt").read())
+        days = Config().config.getint("crl", "validity")
+        crl_binary = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_ASN1, days=days)
+        return crl_binary
 
     @staticmethod
     def read_cert(filename):
