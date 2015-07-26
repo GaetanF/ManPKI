@@ -284,6 +284,13 @@ class LDAP:
         l.simple_bind(Config().config.get("ldap", "dn"), self.get_password())
         return l
 
+    def get_basedn(self):
+        l = self.get_conn()
+        res = l.search_s('', ldap.SCOPE_BASE, '(namingContexts=*)', ['*','+'])
+        for nc in res[0][1]['namingContexts']:
+            if nc.lower() in Config().config.get("ldap", "dn").lower():
+                return nc
+
     def check_dn_exist(self, cert, depth=None):
         l = self.get_conn()
         try:
@@ -392,7 +399,19 @@ class LDAP:
     def delete_cert(self, cert):
         if self.check_dn_exist(cert):
             l = self.get_conn()
-            l.delete_s(self._convert_cert_to_dn(cert))
+            dn = self._convert_cert_to_dn(cert)
+            res = self.get_dn(dn)
+            oc = res[0][1]['objectClass']
+            mod_attrs = []
+            if 'pkiUser' in oc:
+                oc.remove(oc.index('pkiUser'))
+                mod_attrs.append((ldap.MOD_REPLACE, 'objectClass', oc))
+                mod_attrs.append((ldap.MOD_DELETE, 'userCertificate;binary'))
+            elif 'pkiCA' in oc:
+                oc.remove(oc.index('pkiCA'))
+                mod_attrs.append((ldap.MOD_DELETE, 'certificateRevocationList;binary'))
+                mod_attrs.append((ldap.MOD_DELETE, 'cACertificate;binary'))
+            l.modify_s(dn, mod_attrs)
 
     def publish(self):
         if self.check_requirements():
@@ -495,15 +514,14 @@ class Render:
         #print ordered_keys
         (menu, nbr_line, nbr_element) = Render.render_menu(list, selected)
         if displayed:
-            #pass
             print "\033[1A\033[2K\033[%sA" % (nbr_line+1)
         print menu
         select = raw_input("Please select element from 0 to " + str(nbr_element-1) + " (q to escape menu): ")
-        if select.isdigit() and 0 < int(select) < nbr_element-1 and ordered_keys.keys()[int(select)] not in selected:
+        if select.isdigit() and 0 <= int(select) < nbr_element-1 and ordered_keys.keys()[int(select)] not in selected:
             selected.append(ordered_keys.keys()[int(select)])
         elif select.isdigit() and int(select) == nbr_element and len(selected) < nbr_element:
             selected = ordered_keys
-        elif select.isdigit() and 0 < int(select) < nbr_element-1 and ordered_keys.keys()[int(select)] in selected:
+        elif select.isdigit() and 0 <= int(select) < nbr_element-1 and ordered_keys.keys()[int(select)] in selected:
             selected.remove(ordered_keys.keys()[int(select)])
         elif select.isdigit() and int(select) == nbr_element and len(selected) == nbr_element:
             selected = []
@@ -806,7 +824,7 @@ class SSL:
         cpts = string.split("/")
         x509Name = x509obj
         for elt in cpts:
-            exec "x509Name.%s='%s'" % (elt.split("=")[0], elt.split("=")[1])
+            exec "x509Name.%s='%s'" % (elt.split("=")[0].upper(), elt.split("=")[1])
         return x509Name
 
     @staticmethod

@@ -79,6 +79,7 @@ class ShLdap(ShShell):
         print LDAP().get_password()
         try:
             if LDAP().check_dn_exist(SSL.get_ca()):
+                print "BaseDN : " + LDAP().get_basedn()
                 print "Connection and require object successful"
             elif LDAP().check_dn_exist(SSL.get_ca(), depth=1):
                 print "Connection successful. Required object need to be created"

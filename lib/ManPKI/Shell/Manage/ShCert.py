@@ -14,7 +14,6 @@ class ShCert(ShShell):
         ShShell.__init__(self, init_all)
 
     def do_create(self, line):
-        cn = raw_input("Common Name : ")
         print "Profile : "
         profiles = []
         i = 0
@@ -29,8 +28,8 @@ class ShCert(ShShell):
         else:
             print "*** Profile number isn't valid"
             return
-        mail = raw_input("Mail address : ")
-        self.create_cert(cn, profile, mail)
+
+        self.create_cert(profile)
 
     def do_revoke(self, line):
         if line:
@@ -154,7 +153,7 @@ class ShCert(ShShell):
             if k in keys:
                 print "\t\t%s" % v
 
-    def create_cert(self, name, profile, email=None):
+    def create_cert(self, profile):
         before = datetime.utcnow()
         after = before + timedelta(days=Config().config.getint("cert", "validity"))
 
@@ -164,11 +163,37 @@ class ShCert(ShShell):
         cert = SSL.create_cert(pkey)
         if Config().config.get("ldap", "enable") and "false" not in Config().config.get("profile_" + profile, "ldap"):
             print "Search in LDAP"
-        subject = Config().config.get("ca", "base_cn") + "/CN=" + name
+            l = LDAP()
+            filter = Config().config.get("profile_" + profile, "ldap")
+            res = l.get_dn(l.get_basedn(), filter, ['cn', 'mail', 'uid'])
+            listSearch = {}
+            users = {}
+            for elt in res:
+                key = elt[0]
+                val = elt[1]['cn'][0]
+                mail = None
+                if 'mail' in elt[1].keys():
+                    mail = elt[1]['mail'][0]
+                    val = val + " (mail : " + elt[1]['mail'][0] + ")"
+                listSearch.update({key: val})
+                users.update({key: {'mail': mail, 'cn': elt[1]['cn'][0]}})
+            nbr_select = 0
+            while nbr_select != 1:
+                userList = Render.print_selector(listSearch)
+                nbr_select = len(userList)
+            email = users[userList[0]]['mail']
+            cn = users[userList[0]]['cn']
+            subject_array = userList[0].split(',')
+            subject_array.reverse()
+            subject_array.pop()
+            subject = '/'.join(subject_array) + "/CN=" + cn
+        else:
+            cn = raw_input("Common Name : ")
+            email = raw_input("Mail address : ")
+            subject = Config().config.get("ca", "base_cn") + "/CN=" + cn
         subject_x509 = SSL.parse_str_to_x509Name(subject, cert.get_subject())
 
         issuer_x509 = ca.get_subject()
-
         if email:
             subject_x509.emailAddress = email
 
