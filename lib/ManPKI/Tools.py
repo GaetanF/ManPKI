@@ -473,19 +473,28 @@ class LDAP:
 
     def publish(self):
         if self.check_requirements():
+            deleted_cert = 0
+            added_cert = 0
+            updated_cert = 0
             while LDAP.queue:
                 cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, self.pop_queue())
                 state = SSL.get_state_cert(cert)
                 if 'Revoked' in state:
                     print "Delete revoke cert in ldap " + self._convert_cert_to_dn(cert)
                     self.delete_cert(cert)
+                    deleted_cert += 1
                 else:
                     if self.check_dn_exist(cert):
                         print "Update cert in ldap " + self._convert_cert_to_dn(cert)
                         self.update_cert(cert)
+                        updated_cert += 1
                     else:
                         print "Add cert in ldap " + self._convert_cert_to_dn(cert)
                         self.add_cert(cert)
+                        added_cert += 1
+            return added_cert, updated_cert, deleted_cert
+        else:
+            return False
 
 
 class Mailer:
