@@ -1016,10 +1016,12 @@ class SSL:
         if Config().config.has_section("profile_" + profile):
             keysusage = SSL.get_extended_key_usage()
             keys = str(Config().config.get("profile_" + profile, "extended")).split('|')
+            print keys
             a_keys = []
-            for (k,v) in keysusage.iteritems():
+            for (k, v) in keysusage.iteritems():
                 if k in keys:
-                    a_keys.append(v)
+                    a_keys.append(k)
+            print a_keys
             return ', '.join(a_keys)
         else:
             return None
