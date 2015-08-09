@@ -34,6 +34,11 @@ from cStringIO import StringIO
 from queuelib import FifoDiskQueue
 from Crypto.Cipher import Blowfish
 from crontab import CronTab
+from pyasn1.codec.der import encoder, decoder
+from pyasn1.type import useful, univ
+from asn1 import pem
+from asn1 import rfc2560
+from asn1 import rfc2459
 
 import Exceptions.ProtocolException
 import Exceptions.CopyException
@@ -639,6 +644,50 @@ class Render:
         return table[:-1], len(table[:-1].split('\n')), nbr_element
 
     @staticmethod
+    def select_profile():
+        print "Profile : "
+        profiles = []
+        i = 0
+        for sec in Config().config.sections():
+            if "profile_" in sec:
+                profiles.append(sec[8:])
+                print "\t%s: %s" % (i, sec[8:])
+                i += 1
+        pid = raw_input("Profile Number : ")
+        if pid.isdigit():
+            profile = profiles[int(pid)]
+        else:
+            print "*** Profile number isn't valid"
+            return None
+        return profile
+
+    @staticmethod
+    def select_cert(cn=None, profile=None):
+        certs = SSL.get_all_certificates()
+        list_certs = []
+        if cn:
+            pass
+        elif profile:
+            for c in certs:
+                if SSL.cert_equal_to_profile(c['cert'], profile):
+                    list_certs.append(c)
+        else:
+            for c in certs:
+                list_certs.append(c['cert'])
+        print "Certificates : "
+        i = 0
+        for c in list_certs:
+            print "\t%s: %s" % (i, SSL.get_x509_name(c['cert'].get_subject()))
+            i += 1
+        cid = raw_input("Certificate Number : ")
+        if cid.isdigit():
+            certid = list_certs[int(cid)]['id']
+        else:
+            print "*** Certificate number isn't valid"
+            return None
+        return certid
+
+    @staticmethod
     def print_selector(list, selected=[], displayed=False):
         ordered_keys = OrderedDict(sorted(list.items()))
         #print ordered_keys
@@ -985,6 +1034,15 @@ class SSL:
         SSL.set_crl(crl)
 
     @staticmethod
+    def _parse_bitstring_to_keyusage(bitstring):
+        keyusage = SSL.get_key_usage()
+        list_keyusage = []
+        for n, v in enumerate(bitstring):
+            if v:
+                list_keyusage.append(keyusage["2.5.29.15."+str(n)])
+        return list_keyusage
+
+    @staticmethod
     def get_key_usage():
         d = {}
         for e in Config().config.items("keyusage"):
@@ -999,32 +1057,76 @@ class SSL:
         return d
 
     @staticmethod
-    def get_key_usage_from_profile(profile):
+    def get_array_key_usage_from_profile(profile):
         if Config().config.has_section("profile_" + profile):
             keysusage = SSL.get_key_usage()
             keys = str(Config().config.get("profile_" + profile, "keyusage")).split('|')
             a_keys = []
-            for (k,v) in keysusage.iteritems():
+            for (k, v) in keysusage.iteritems():
                 if k in keys:
                     a_keys.append(v)
-            return ', '.join(a_keys)
+            return a_keys
+        else:
+            return None
+
+    @staticmethod
+    def get_key_usage_from_profile(profile):
+        if Config().config.has_section("profile_" + profile):
+            return ', '.join(SSL.get_array_key_usage_from_profile(profile))
+        else:
+            return None
+
+    @staticmethod
+    def get_array_extended_key_usage_from_profile(profile):
+        if Config().config.has_section("profile_" + profile):
+            keysusage = SSL.get_extended_key_usage()
+            keys = str(Config().config.get("profile_" + profile, "extended")).split('|')
+            a_keys = []
+            for (k, v) in keysusage.iteritems():
+                if k in keys:
+                    a_keys.append(k)
+            return a_keys
         else:
             return None
 
     @staticmethod
     def get_extended_key_usage_from_profile(profile):
         if Config().config.has_section("profile_" + profile):
-            keysusage = SSL.get_extended_key_usage()
-            keys = str(Config().config.get("profile_" + profile, "extended")).split('|')
-            print keys
-            a_keys = []
-            for (k, v) in keysusage.iteritems():
-                if k in keys:
-                    a_keys.append(k)
-            print a_keys
-            return ', '.join(a_keys)
+            return ', '.join(SSL.get_array_extended_key_usage_from_profile(profile))
         else:
             return None
+
+    @staticmethod
+    def cert_equal_to_profile(cert, profile):
+        keyprofile = SSL.get_array_key_usage_from_profile(profile)
+        extendedkeyprofile = SSL.get_array_extended_key_usage_from_profile(profile)
+        return SSL.cert_equal_to_key_and_extended_key(cert, keyprofile, extendedkeyprofile)
+
+    @staticmethod
+    def cert_equal_to_key_and_extended_key(cert, keysusage, extendedkeys, strict=True):
+        extendkey_match = True
+        keyusage_match = True
+        for i in range(0, cert.get_extension_count()):
+            if cert.get_extension(i).get_short_name() in "extendedKeyUsage":
+                val, _ = decoder.decode(cert.get_extension(i).get_data(), asn1Spec=univ.Sequence())
+                size_extendedkey = 0
+                for n, v in enumerate(val):
+                    size_extendedkey += 1
+                    if v.__str__() not in extendedkeys:
+                        extendkey_match = False
+                if len(extendedkeys) != size_extendedkey and strict:
+                    extendkey_match = False
+            elif cert.get_extension(i).get_short_name() in "keyUsage":
+                val, _ = decoder.decode(cert.get_extension(i).get_data(), asn1Spec=rfc2459.KeyUsage())
+                key_from_cert = SSL._parse_bitstring_to_keyusage(tuple(val))
+                if strict:
+                    if sorted(key_from_cert) != sorted(keysusage):
+                        keyusage_match = False
+                else:
+                    for v in keysusage:
+                        if v not in key_from_cert:
+                            keyusage_match = False
+        return extendkey_match & keyusage_match
 
     @staticmethod
     def get_state_cert(cert):
