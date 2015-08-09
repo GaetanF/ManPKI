@@ -14,22 +14,9 @@ class ShCert(ShShell):
         ShShell.__init__(self, init_all)
 
     def do_create(self, line):
-        print "Profile : "
-        profiles = []
-        i = 0
-        for sec in Config().config.sections():
-            if "profile_" in sec:
-                profiles.append(sec[8:])
-                print "\t%s: %s" % (i, sec[8:])
-                i += 1
-        pid = raw_input("Profile Number : ")
-        if pid.isdigit():
-            profile = profiles[int(pid)]
-        else:
-            print "*** Profile number isn't valid"
-            return
-
-        self.create_cert(profile)
+        profile = Render.select_profile()
+        if profile:
+            self.create_cert(profile)
 
     def do_revoke(self, line):
         if line:
