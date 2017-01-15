@@ -17,7 +17,7 @@
 # would be nicer
 #
 from pyasn1.type import tag, namedtype, namedval, univ, useful
-import rfc2459
+from manpki.asn1 import rfc2459
 
 # Start of OCSP module definitions
 

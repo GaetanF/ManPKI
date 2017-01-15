@@ -1,0 +1,3 @@
+{
+  "render_manpki.api.cert.show_cert": "{cert:table:id|subject|notbefore|notafter|state}"
+}

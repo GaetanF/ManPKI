@@ -1,0 +1,30 @@
+# ManPKI POT
+# Copyright (C) 2017
+# Gaetan FEREZ <manpki@ferez.fr>, 2017.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 1.0\n"
+"POT-Creation-Date: 2017-01-15 11:55+Coordinated Universal Time\n"
+"PO-Revision-Date: 2017-01-15 11:55+Coordinated Universal Time\n"
+"Last-Translator: Gaetan FEREZ <manpki@ferez.fr>\n"
+"Language-Team: Unknown <manpki@ferez.fr>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+
+msgid "certid"
+msgstr ""
+
+msgid "error"
+msgstr ""
+
+msgid "basecn"
+msgstr ""
+
+msgid "mail"
+msgstr ""
+
+msgid "render_cert"
+msgstr ""
