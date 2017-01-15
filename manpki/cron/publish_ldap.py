@@ -1,6 +1,6 @@
 __author__ = 'ferezgaetan'
 
-from Tools import Mailer, LDAP, Config
+from command import Mailer, LDAP, Config
 
 if "schedule" in Config().config.get("ldap", "mode"):
     state = LDAP().publish()

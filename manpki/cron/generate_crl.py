@@ -1,6 +1,6 @@
 __author__ = 'ferezgaetan'
 
-from Tools import Mailer, SSL
+from command import Mailer, SSL
 
 if SSL.generate_crl():
     ca = SSL.get_ca()

@@ -1,7 +1,6 @@
 __author__ = 'ferezgaetan'
 
 import sys
-import Secret
 import ConfigParser
 import urlparse
 import tempfile
@@ -40,8 +39,8 @@ from asn1 import pem
 from asn1 import rfc2560
 from asn1 import rfc2459
 
-import Exceptions.ProtocolException
-import Exceptions.CopyException
+import exceptions.ProtocolException
+import exceptions.CopyException
 
 from cryptography.hazmat.bindings.openssl.binding import Binding
 binding = Binding()
@@ -120,32 +119,6 @@ class Capturing(list):
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
-
-
-class Config:
-    config = None
-    config_path = Secret.config_file
-
-    sections = ("default", "ca", "crl", "ocsp", "keyusage", "extended", "ldap", "smtp", "cert")
-
-    def __init__(self):
-        if not Config.config:
-            if Secret.debug:
-                print "Read configuration file : " + Config.config_path
-            Config.config = ConfigParser.ConfigParser()
-            Config.config.read(Config.config_path)
-            if Secret.debug:
-                print "Verify all needed sections"
-            for sec in self.sections:
-                if not Config().config.has_section(sec):
-                    Config().config.add_section(sec)
-
-    def write(self):
-        # Writing our configuration file to 'example.cfg'
-        print "Building configuration..."
-        with open(Config.config_path, 'wb') as configfile:
-            Config.config.write(configfile)
-        print "[OK]"
 
 
 class Copy:
@@ -242,16 +215,16 @@ class Copy:
         try:
             self.methods_in[source_uri.scheme](source_uri)
         except KeyError:
-            print Exceptions.ProtocolException("Unknown protocol")
-        except Exception, e:
-            print e
+            print(exceptions.ProtocolException("Unknown protocol"))
+        except Exception as e:
+            print(e)
 
         dest_uri = urlparse.urlparse(dest)
         try:
             tmp_func = self.methods_out[dest_uri.scheme]
             tmp_func(dest_uri)
         except KeyError:
-            print Exceptions.ProtocolException("Unknown protocol")
+            print(exceptions.ProtocolException("Unknown protocol"))
 
         self.tmp_file.close()
 
@@ -487,7 +460,7 @@ class LDAP:
         dn = self._convert_cert_to_dn(cert)
         res = self.get_dn(dn)
         if len(res) != 1:
-            print "One cert must be found"
+            print("One cert must be found")
             return False
         oc = res[0][1]['objectClass']
         mod_attrs = []
@@ -548,16 +521,16 @@ class LDAP:
                 cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, self.pop_queue())
                 state = SSL.get_state_cert(cert)
                 if 'Revoked' in state:
-                    print "Delete revoke cert in ldap " + self._convert_cert_to_dn(cert)
+                    print("Delete revoke cert in ldap " + self._convert_cert_to_dn(cert))
                     self.delete_cert(cert)
                     deleted_cert += 1
                 else:
                     if self.check_dn_exist(cert):
-                        print "Update cert in ldap " + self._convert_cert_to_dn(cert)
+                        print("Update cert in ldap " + self._convert_cert_to_dn(cert))
                         self.update_cert(cert)
                         updated_cert += 1
                     else:
-                        print "Add cert in ldap " + self._convert_cert_to_dn(cert)
+                        print("Add cert in ldap " + self._convert_cert_to_dn(cert))
                         self.add_cert(cert)
                         added_cert += 1
             return added_cert, updated_cert, deleted_cert
@@ -651,7 +624,7 @@ class Render:
         for sec in Config().config.sections():
             if "profile_" in sec:
                 profiles.append(sec[8:])
-                print "\t%s: %s" % (i, sec[8:])
+                print("\t%s: %s" % (i, sec[8:]))
                 i += 1
         pid = raw_input("Profile Number : ")
         if pid.isdigit():
@@ -1149,24 +1122,24 @@ class SSL:
 
     @staticmethod
     def display_cert(cert):
-        print "ID : %s " % SSL.get_cert_id(cert)
-        print "Subject : %s " % SSL.get_x509_name(cert.get_subject())
-        print "Issuer : %s " % SSL.get_x509_name(cert.get_issuer())
-        print "Serial : %s" % cert.get_serial_number()
-        print "Key size : %s" % cert.get_pubkey().bits()
-        print "Version : %s" % cert.get_version()
-        print "State : Expired" if cert.has_expired() else "State : OK"
-        print "Validity"
+        print("ID : %s " % SSL.get_cert_id(cert))
+        print("Subject : %s " % SSL.get_x509_name(cert.get_subject()))
+        print("Issuer : %s " % SSL.get_x509_name(cert.get_issuer()))
+        print("Serial : %s" % cert.get_serial_number())
+        print("Key size : %s" % cert.get_pubkey().bits())
+        print("Version : %s" % cert.get_version())
+        print("State : Expired") if cert.has_expired() else "State : OK"
+        print("Validity")
         after_datetime = SSL.decode_time(cert.get_notAfter())
-        delta =  after_datetime.replace(tzinfo=None) - after_datetime.utcoffset() - dt.datetime.utcnow()
-        print "\tNot before : %s" % SSL.decode_time(cert.get_notBefore()).strftime("%c %Z")
-        print "\tNot after : %s (%s)" % ( SSL.decode_time(cert.get_notAfter()).strftime("%c %Z"), delta)
-        print "Algorithm"
+        delta =  after_datetime.replace(tzinfo=None) - after_datetime.utcoffset() - dt.datetime.utcnow())
+        print("\tNot before : %s" % SSL.decode_time(cert.get_notBefore()).strftime("%c %Z"))
+        print("\tNot after : %s (%s)" % ( SSL.decode_time(cert.get_notAfter()).strftime("%c %Z"), delta)
+        print("Algorithm")
         if cert.get_pubkey().type() == OpenSSL.crypto.TYPE_RSA:
-            print "\tPublic key : %s" % "rsaEncryption"
+            print("\tPublic key : %s" % "rsaEncryption")
         elif cert.get_pubkey().type() == OpenSSL.crypto.TYPE_DSA:
-            print "\tPublic key : %s" % "dsaEncryption"
-        print "\tSignature : %s" % cert.get_signature_algorithm()
-        print "Fingerprint"
-        print "\tSHA1 : %s" % cert.digest(b"sha1")
-        print "\tMD5 : %s" % cert.digest(b"md5")
+            print("\tPublic key : %s" % "dsaEncryption")
+        print("\tSignature : %s" % cert.get_signature_algorithm())
+        print("Fingerprint")
+        print("\tSHA1 : %s" % cert.digest(b"sha1"))
+        print("\tMD5 : %s" % cert.digest(b"md5"))

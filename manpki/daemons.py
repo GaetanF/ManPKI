@@ -15,5 +15,5 @@ class Daemons:
     def check_status(daemon):
         import os
         ret = None
-        exec "ret = Daemons." + daemon + "_daemon"
+        exec("ret = Daemons." + daemon + "_daemon")
         os.system("python " + ret + " status")
