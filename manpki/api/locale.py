@@ -1,10 +1,9 @@
-import flask.json
-from flask import Blueprint, json, request
+from flask import Blueprint
 
-localeroute = Blueprint('locales', __name__, url_prefix='/locales')
+locale_route = Blueprint('locales', __name__, url_prefix='/locales')
 
 
-@localeroute.route("/<locale>")
+@locale_route.route("/<locale>")
 def get_locales(locale):
     locales = []
     return locales, 200

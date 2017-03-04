@@ -1,5 +1,4 @@
 import pam
-from time import time
 from datetime import datetime, timedelta
 from tinydb import where
 from jose import jwt, exceptions

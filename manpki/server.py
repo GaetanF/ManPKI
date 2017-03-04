@@ -1,13 +1,12 @@
 import traceback
 
 from gevent.pywsgi import WSGIServer
-from flask import Flask, session, g
+from flask import Flask, g
 
 from gevent import socket
 import ssl
-from jose import jwt
 
-from manpki.config import WEB_SECRET, TOKEN_SECRET, envready
+from manpki.config import WEB_SECRET, envready
 from manpki.tools import *
 from manpki.db import ServerParameter
 from manpki.i18n import *
@@ -25,7 +24,8 @@ app.secret_key = WEB_SECRET
 
 API.build_routes(app)
 
-#for rule in app.url_map.iter_rules():
+
+# for rule in app.url_map.iter_rules():
 #    log.info(rule)
 
 
@@ -66,58 +66,13 @@ def verify_token(token):
 @basic_auth.verify_password
 def verify_password(username, password):
     user = User(username=username)
-    serverparam = ServerParameter.get()
-    if user.authenticate(password) or serverparam.host == 'socket':
+    server_param = ServerParameter.get()
+    if user.authenticate(password) or server_param.host == 'socket':
         g.user = user
         session['username'] = username
         return True
     return False
 
-
-# @app.route('/router')
-# @multi_auth.login_required
-# def list_routes():
-#     import urllib
-#     routes = []
-#     for rule in app.url_map.iter_rules():
-#
-#         options = {}
-#         for arg in rule.arguments:
-#             options[arg] = "[{0}]".format(arg)
-#
-#         methods = (','.join(rule.methods)).split(',')
-#         if 'OPTIONS' in methods:
-#             methods.remove('OPTIONS')
-#         if 'HEAD' in methods:
-#             methods.remove('HEAD')
-#         methods = ','.join(methods)
-#         url = url_for(rule.endpoint, **options)
-#         routes.append({'endpoint': rule.endpoint, 'methods': methods, 'url': urllib.parse.unquote(url)})
-#
-#     return {'routes': tuple(routes)}, 200
-#
-#
-# @app.route('/commands')
-# @multi_auth.login_required
-# def list_commands():
-#     routes, statuscode = list_routes()
-#     cmds = []
-#     for rule in API.rulescli:
-#         if API().is_authorized(rule):
-#             findroute = None
-#             for route in routes['routes']:
-#                 if route['endpoint'] == rule.get_endpoint():
-#                     findroute = {'methods': route['methods'], 'url': route['url']}
-#
-#             if findroute:
-#                 cmds.append({
-#                     "cmd": rule.path,
-#                     "context": rule.context,
-#                     "methods": findroute['methods'],
-#                     "url": findroute['url']
-#                 })
-#
-#     return {'commands': tuple(cmds)}, 200
 
 @app.route('/')
 def default_page():
@@ -128,12 +83,12 @@ def default_page():
 @app.route('/discovery')
 @multi_auth.login_required
 def get_api_discovery():
-    discoapi = []
+    disco_api = []
     for rule in API.routes:
         log.info(rule)
         if rule.is_authorized():
-            discoapi.append(rule.json())
-    return {'api': discoapi}, 200
+            disco_api.append(rule.json())
+    return {'api': disco_api}, 200
 
 
 @app.route("/locale/<lang>")
@@ -193,12 +148,12 @@ def start():
         if host == 'socket':
             log.debug("Use Socket")
             listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sockname = '/tmp/manpki.sock'
-            if os.path.exists(sockname):
-                os.remove(sockname)
-            listener.bind(sockname)
+            sock_name = '/tmp/manpki.sock'
+            if os.path.exists(sock_name):
+                os.remove(sock_name)
+            listener.bind(sock_name)
             listener.listen(1)
-            sslctxt = {}
+            ssl_ctxt = {}
         else:
             log.debug("Use Host and Port")
             listener = (host, port)
@@ -208,14 +163,14 @@ def start():
             else:
                 log.warn("Use auto-generated SSL Certificate")
                 cert_file, pkey_file = WebSSL().generate_adhoc_ssl_context()
-            sslctxt = {
+            ssl_ctxt = {
                 'certfile': cert_file,
                 'keyfile': pkey_file,
                 'ssl_version': ssl.PROTOCOL_SSLv23,
             }
         log.info("Start server on {}:{}".format(host, port))
-        wsgiserver = WSGIServer(listener, app, **sslctxt)
-        wsgiserver.serve_forever()
+        wsgi_server = WSGIServer(listener, app, **ssl_ctxt)
+        wsgi_server.serve_forever()
     except Exception as err:
         log.critical(err)
 
@@ -227,4 +182,3 @@ def daemon_starter():
         run_with_reloader(start)
     else:
         log.critical("Cannot start ManPKID, the environnement isn't ready")
-

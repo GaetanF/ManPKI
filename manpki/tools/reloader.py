@@ -21,7 +21,7 @@ def _get_args_for_reloading():
     rv = [sys.executable]
     py_script = sys.argv[0]
     if os.name == 'nt' and not os.path.exists(py_script) and \
-       os.path.exists(py_script + '.exe'):
+            os.path.exists(py_script + '.exe'):
         py_script += '.exe'
     rv.append(py_script)
     rv.extend(sys.argv[1:])
@@ -149,5 +149,6 @@ def run_with_reloader(args, **kwargs):
             sys.exit(reloader.restart_with_reloader())
     except KeyboardInterrupt:
         pass
+
 
 reloader = StatReloaderLoop()

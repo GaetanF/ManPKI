@@ -1,6 +1,5 @@
 import os
 import json
-from manpki.tools import log
 
 
 def get_path_render():

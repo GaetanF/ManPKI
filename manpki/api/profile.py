@@ -1,8 +1,6 @@
-import flask.json
 from tinydb import where
-from flask import Blueprint, json, request
-import traceback
-from manpki.tools import SSL, API, multi_auth
+from flask import json, request
+from manpki.tools import API, multi_auth
 from manpki.logger import log
 from manpki.db import Profile
 
@@ -23,11 +21,11 @@ def show_profile(profileid):
             code = 404
     else:
         log.info("Show all profiles")
-        list = Profile.all()
-        finalList = []
-        for l in list:
-            finalList.append(l.__repr__())
-        message = {'profile': finalList}
+        all_profile = Profile.all()
+        final_list = []
+        for l in all_profile:
+            final_list.append(l.__repr__())
+        message = {'profile': final_list}
         code = 200
 
     return message, code

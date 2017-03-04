@@ -49,13 +49,13 @@ def set_ca():
     print(request)
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
-    caparam = CAParameter.get()
-    for name, field in caparam:
+    ca_param = CAParameter.get()
+    for name, field in ca_param:
         if not name.startswith("_") and name in data:
-            setattr(caparam, name, data[name])
+            setattr(ca_param, name, data[name])
     try:
-        caparam.validate()
-        caparam.save()
+        ca_param.validate()
+        ca_param.save()
         return {'state': 'OK'}, 200
     except:
         return {'error': 'CA param not valid'}, 404
@@ -68,9 +68,9 @@ def set_ca():
 @multi_auth.login_required
 def get_caparam(param):
     print(param)
-    caparam = CAParameter.get()
-    if param and hasattr(caparam, param):
-        the_return = {param: getattr(caparam, param)}
+    ca_param = CAParameter.get()
+    if param and hasattr(ca_param, param):
+        the_return = {param: getattr(ca_param, param)}
     else:
-        the_return = caparam.to_struct()
+        the_return = ca_param.to_struct()
     return the_return, 200

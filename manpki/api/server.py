@@ -1,7 +1,6 @@
-from tinydb import where
 import os
 from flask import json, request
-from manpki.tools import SSL, API, multi_auth, ConfigObject, WebSSL
+from manpki.tools import SSL, API, multi_auth, ConfigObject
 from manpki.config import write
 from manpki.logger import log
 from manpki.tools.reloader import reload
@@ -11,15 +10,15 @@ from manpki.tools.reloader import reload
 def restart_server():
     time = 5
     reload(time)
-    return {'message': 'reload in '+str(time)+' second'}, 200
+    return {'message': 'reload in ' + str(time) + ' second'}, 200
 
 
 @API.route("/server/set", "set [param=value]", method='POST', args=[
-        {"name": "host", "type": "str", "mandatory": False},
-        {"name": "port", "type": "int", "mandatory": False},
-        {"name": "cert", "type": "str", "mandatory": False},
-        {"name": "key", "type": "str", "mandatory": False},
-    ], context="server", level=API.ADMIN)
+    {"name": "host", "type": "str", "mandatory": False},
+    {"name": "port", "type": "int", "mandatory": False},
+    {"name": "cert", "type": "str", "mandatory": False},
+    {"name": "key", "type": "str", "mandatory": False},
+], context="server", level=API.ADMIN)
 def set_param_server():
     data = request.get_json(silent=True)
     if "host" in data and data["host"] == "socket":
@@ -51,8 +50,8 @@ def set_param_server():
 def show_server():
     info = ConfigObject.items("server")
     log.info(info)
-    finalList = {}
+    final_list = {}
     for l in info:
-        finalList[l[0]] = l[1]
-    message = {'server': finalList}
+        final_list[l[0]] = l[1]
+    message = {'server': final_list}
     return message, 200

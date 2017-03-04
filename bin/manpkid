@@ -25,11 +25,11 @@ import sys
 def main():
     parser = argparse.ArgumentParser(description='ManPKI daemon.')
     parser.add_argument("-v", "--version", action="store_true",
-                            help="show version")
+                        help="show version")
     parser.add_argument("-D", "--debug", action="store_true",
-                            help="debug mode")
+                        help="debug mode")
     parser.add_argument("-d", "--daemon", action="store_true",
-                            help="daemon")
+                        help="daemon")
 
     args = parser.parse_args()
     if args.debug:

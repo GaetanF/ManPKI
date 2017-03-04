@@ -1,7 +1,6 @@
 from flask import json, request
 from tinydb import where
 from manpki.tools import SSL, API, multi_auth
-from manpki.tools.event import event
 from manpki.logger import log
 from manpki.db import CertParameter, Profile
 
@@ -32,13 +31,13 @@ def show_cert(certid):
 def set_cert():
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
-    certparam = CertParameter.get()
-    for name, field in certparam:
+    cert_param = CertParameter.get()
+    for name, field in cert_param:
         if not name.startswith("_") and name in data:
-            setattr(certparam, name, data[name])
+            setattr(cert_param, name, data[name])
     try:
-        certparam.validate()
-        certparam.save()
+        cert_param.validate()
+        cert_param.save()
         return {'state': 'OK'}, 200
     except:
         return {'state': 'NOK'}, 404
@@ -60,8 +59,8 @@ def add_cert():
         else:
             try:
                 profile = Profile.get(where('name') == data['profile'])
-                certid = SSL.create_cert(profile, data)
-                message = {'message': 'certificate created', 'certid': certid}
+                cert_id = SSL.create_cert(profile, data)
+                message = {'message': 'certificate created', 'certid': cert_id}
                 code = 200
             except Exception as e:
                 message = {'error': 'error during certificate creation', 'message': e.__repr__(),
@@ -78,11 +77,11 @@ def add_cert():
     {"name": "param", "type": "str", "mandatory": False}], level=API.USER)
 @API.route("/ca/param/<param>", "show ca param [param]", method='GET', args=[
     {"name": "param", "type": "str", "mandatory": False}], level=API.USER)
-def get_certparam(param):
-    certparam = CertParameter.get()
+def get_cert_param(param):
+    cert_param = CertParameter.get()
     if param:
-        theReturn = {param: getattr(certparam, param)}
+        the_return = {param: getattr(cert_param, param)}
     else:
-        theReturn = certparam.to_struct()
+        the_return = cert_param.to_struct()
 
-    return theReturn, 200
+    return the_return, 200

@@ -1,9 +1,8 @@
-import flask.json
 from flask import json, request
 from tinydb import where
-from manpki.tools import SSL, API, multi_auth
+from manpki.tools import API, multi_auth
 from manpki.logger import log
-from manpki.db import KeyUsage, ExtendedKeyUsage, ExtensionModel
+from manpki.db import ExtensionModel
 
 
 @API.route("/extension/", "show extension", defaults={'oid': None}, method='GET', args=[
@@ -21,11 +20,11 @@ def show_extension(oid):
             message = {'error': 'notexist', 'oid': oid}
             code = 404
     else:
-        list = ExtensionModel.all()
-        finalList = []
-        for l in list:
-            finalList.append(l.__repr__())
-        message = {'extension': finalList}
+        all_extension = ExtensionModel.all()
+        final_list = []
+        for l in all_extension:
+            final_list.append(l.__repr__())
+        message = {'extension': final_list}
         code = 200
 
     return message, code

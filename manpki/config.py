@@ -83,25 +83,26 @@ def get_var_directory(paths=None):
     return None
 
 
+def check_candidate(path, directory=None):
+    """Auxilliary function that checks whether a particular
+    path is a good candidate.
+
+    """
+    path_candidate = os.path.join(path, 'share', 'manpki')
+    if directory is not None:
+        path_candidate = os.path.join(path_candidate, directory)
+    try:
+        if stat.S_ISDIR(os.stat(path_candidate).st_mode):
+            return path_candidate
+    except OSError:
+        pass
+
+
 def guess_prefix(directory=None):
     """Attempts to find the base directory where ManPKI components are
     installed.
 
     """
-
-    def check_candidate(path, directory=None):
-        """Auxilliary function that checks whether a particular
-        path is a good candidate.
-
-        """
-        candidate = os.path.join(path, 'share', 'manpki')
-        if directory is not None:
-            candidate = os.path.join(candidate, directory)
-        try:
-            if stat.S_ISDIR(os.stat(candidate).st_mode):
-                return candidate
-        except OSError:
-            pass
 
     if __file__.startswith('/'):
         path = '/'
@@ -121,10 +122,10 @@ def guess_prefix(directory=None):
 def write():
     from manpki.logger import log
     log.debug("Building configuration...")
-    for fname in get_config_file():
+    for f_name in get_config_file():
         if DEBUG:
-            log.debug("Write configuration file : " + fname)
-        with open(fname, 'w') as configfile:
+            log.debug("Write configuration file : " + f_name)
+        with open(f_name, 'w') as configfile:
             ConfigObject.write(configfile)
     log.debug("[OK]")
 
@@ -144,11 +145,11 @@ class ManPKIConfig(object):
 if not ConfigObject:
     ConfigObject = configparser.ConfigParser()
     configRead = False
-    for fname in get_config_file():
+    for f_name in get_config_file():
         if DEBUG:
             from manpki.logger import log
-            log.debug("Read configuration file : " + fname)
-        ConfigObject.read(fname)
+            log.debug("Read configuration file : " + f_name)
+        ConfigObject.read(f_name)
         configRead = True
     if not configRead:
         ConfigObject = None

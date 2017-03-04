@@ -2,15 +2,12 @@ import os
 import re
 import polib
 import json
-from manpki.tools import log
 
 
 def _convert_po_2_dict(po):
     """Convert po object to dictionary data structure (ready for JSON).
     """
     result = {}
-
-    # result[''] = po.metadata.copy()
 
     for entry in po:
         if entry.obsolete:
@@ -22,14 +19,13 @@ def _convert_po_2_dict(po):
             key = entry.msgid
 
         if entry.msgstr:
-            # result[key] = [None, entry.msgstr]
             result[key] = entry.msgstr
         elif entry.msgstr_plural:
             plural = [entry.msgid_plural]
             result[key] = plural
             ordered_plural = sorted(entry.msgstr_plural.items())
-            for order, msgstr in ordered_plural:
-                plural.append(msgstr)
+            for order, msg_str in ordered_plural:
+                plural.append(msg_str)
     return result
 
 
