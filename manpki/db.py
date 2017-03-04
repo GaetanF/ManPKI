@@ -213,6 +213,9 @@ class Profile(TinyJsonModel):
 class Roles(models.Base):
     role = fields.StringField(required=True)
 
+    def __init__(self, **kwargs):
+        super(Roles, self).__init__(**kwargs)
+
     def __repr__(self):
         return self.role
 

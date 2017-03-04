@@ -41,7 +41,8 @@ def create_ca():
 
 @API.route("/ca/param", "set", method='POST', level=API.ADMIN, context="ca", args=[
     {"name": "basecn", "type": "str", "mandatory": False},
-    {"name": "email", "type": "email", "mandatory": False}
+    {"name": "email", "type": "email", "mandatory": False},
+    {"name": "keysize", "type": "int", "mandatory": False}
 ])
 @multi_auth.login_required
 def set_ca():

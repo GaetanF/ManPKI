@@ -1,5 +1,5 @@
 availablepython=""
-dir="/Users/ferezgaetan/Dev/pyprojects/"
+dir=`pwd`"/../"
 for project in $(ls $dir);
 do 
 	availablepython="$availablepython:$dir$project"

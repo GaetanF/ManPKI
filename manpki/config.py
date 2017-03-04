@@ -29,12 +29,18 @@ import configparser
 import os
 import stat
 
-from manpki.logger import log
+__author__ = 'ferezgaetan'
+__version__ = '0.2'
+
 
 # Default values:
 DB = "mongodb:///manpki"
-DEBUG = True
 DEFAULT_CONFIG = "/etc/manpki/manpki.conf"
+if 'DEBUG' not in __builtins__:
+    DEBUG = False
+else:
+    import builtins
+    DEBUG = builtins.DEBUG
 GZ_CMD = "zcat"
 BZ2_CMD = "bzcat"
 
@@ -52,6 +58,7 @@ ManPKIObject = None
 def get_config_file(paths=None):
     """Generates (yields) the available config files, in the correct order."""
     if DEBUG:
+        from manpki.logger import log
         log.debug("Get config file")
     if paths is None:
         paths = [os.path.join(path, 'manpki.conf')
@@ -65,6 +72,7 @@ def get_config_file(paths=None):
 def get_var_directory(paths=None):
     """Generates (yields) the available config files, in the correct order."""
     if DEBUG:
+        from manpki.logger import log
         log.debug("Get VAR directory")
     if paths is None:
         paths = ['/var/lib/manpki', '/opt/manpki',
@@ -111,10 +119,14 @@ def guess_prefix(directory=None):
 
 
 def write():
-    print("Building configuration...")
-    with open(DEFAULT_CONFIG, 'wb') as configfile:
-        ConfigObject.write(configfile)
-    print("[OK]")
+    from manpki.logger import log
+    log.debug("Building configuration...")
+    for fname in get_config_file():
+        if DEBUG:
+            log.debug("Write configuration file : " + fname)
+        with open(fname, 'w') as configfile:
+            ConfigObject.write(configfile)
+    log.debug("[OK]")
 
 
 def envready():
@@ -134,6 +146,7 @@ if not ConfigObject:
     configRead = False
     for fname in get_config_file():
         if DEBUG:
+            from manpki.logger import log
             log.debug("Read configuration file : " + fname)
         ConfigObject.read(fname)
         configRead = True

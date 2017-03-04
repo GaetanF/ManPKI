@@ -18,13 +18,31 @@
 
 """ManPKI Main Daemon"""
 
-import manpki
-from manpki.logger import log
-from manpki.config import envready
+import argparse
+import sys
+
+
+def main():
+    parser = argparse.ArgumentParser(description='ManPKI daemon.')
+    parser.add_argument("-v", "--version", action="store_true",
+                            help="show version")
+    parser.add_argument("-D", "--debug", action="store_true",
+                            help="debug mode")
+    parser.add_argument("-d", "--daemon", action="store_true",
+                            help="daemon")
+
+    args = parser.parse_args()
+    if args.debug:
+        import builtins
+        builtins.DEBUG = True
+    if args.version:
+        from manpki import show_version
+        show_version()
+        sys.exit()
+
+    from manpki.server import daemon_starter
+    daemon_starter()
+
 
 if __name__ == "__main__":
-    if envready():
-        log.info("Envready")
-        manpki.start()
-    else:
-        log.critical("Cannot start ManPKID, the environnement isn't ready")
+    main()

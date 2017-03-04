@@ -28,5 +28,4 @@ msgstr "Base CN"
 msgid "mail"
 msgstr "Email"
 
-msgid "render_cert"
-msgstr ""
+

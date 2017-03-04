@@ -1,23 +1,13 @@
 # ManPKI
-Python Daemon for managing X.509 PKI
-
-Prerequisites
-==========================================
-- python-configparser
-- python-pyasn1
-- python-scp
-- python-ldap
-- python-crontab
-- python-daemonocle
-- python-pycrypto
-- python-OpenSSL
+X.509 PKI API Manager
 
 Setup
 ==========================================
 
 - Fill /etc/manpki/manpki.conf file in manpki with content :
-    WEB_SECRET = randomstring
-    TOKEN_SECRET = randomstring
+    [default]
+    websecret = randomstring
+    tokensecret = randomstring
 
 
 Features
@@ -28,3 +18,4 @@ Features
 - JOSE
 - Internationalization
 - PAM authentication
+- Module extension

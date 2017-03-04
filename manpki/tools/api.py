@@ -11,10 +11,10 @@ from manpki.config import API_VERSION
 def load_api_modules():
     for p in pkgutil.iter_modules():
         if "manpki" in p[1] and "manpkicli" not in p[1] and p[1] not in sys.modules.keys():
-            log.info(p)
+            log.debug(p)
             if hasattr(__import__(p[1]), "api"):
                 __import__("%s.%s" % (p[1], "api"))
-    log.info([x for x in sys.modules.keys() if x.startswith('manpki')])
+    log.debug([x for x in sys.modules.keys() if x.startswith('manpki')])
 
 
 class APIMethodArg:
@@ -224,7 +224,7 @@ class API:
     @staticmethod
     def build_routes(app):
         for route in API.routes:
-            log.info(route)
+            log.debug(route)
             app.add_url_rule(
                 rule=route.url,
                 endpoint=route.endpoint.__name__,

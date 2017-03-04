@@ -11,7 +11,11 @@ except ImportError:
 
 def mk_logger():
     log = logging.getLogger()  # root logger
-    log.setLevel(logging.DEBUG)
+    from manpki.config import DEBUG
+    if DEBUG:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
     format = '%(asctime)s - %(levelname)-8s - %(message)s'
     date_format = '%Y-%m-%d %H:%M:%S'
     if have_colorlog and os.isatty(2):

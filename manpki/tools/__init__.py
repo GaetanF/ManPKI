@@ -3,7 +3,6 @@ from jose import jws
 from functools import wraps
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth, MultiAuth
 
-from manpki.logger import log
 from manpki.tools.api import *
 from manpki.tools.ssl import *
 from manpki.tools.user import *
