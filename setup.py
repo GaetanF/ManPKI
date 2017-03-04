@@ -6,7 +6,7 @@ import os
 from glob import glob
 import platform
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
 
 VERSION = __import__('manpki').VERSION
 

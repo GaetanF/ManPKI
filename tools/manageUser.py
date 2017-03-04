@@ -81,7 +81,7 @@ def main():
             user.validate()
             user.insert()
             print('User {} added.'.format(args.username))
-        except:
+        except BaseException:
             print('Unable to add user {}'.format(args.username))
 
     if args.username and args.delete and not args.add and not args.list:
@@ -89,7 +89,7 @@ def main():
         try:
             user.delete()
             print('User {} deleted.'.format(args.username))
-        except:
+        except BaseException:
             print('Unable to delete user {}'.format(args.username))
 
     if args.username and args.grant_role and not args.delete and not args.list:
@@ -102,7 +102,7 @@ def main():
             user.validate()
             user.save()
             print('Role {} added to user {}.'.format(args.grant_role, args.username))
-        except:
+        except BaseException:
             print('Unable to grant role {} to {}'.format(args.grant_role, args.username))
 
     if args.username and args.delete_role and not args.delete and not args.list:
@@ -119,7 +119,7 @@ def main():
             user.validate()
             user.save()
             print('Role {} revoked from user {}.'.format(args.delete_role, args.username))
-        except:
+        except BaseException:
             print('Unable to delete role {} to {}'.format(args.delete_role, args.username))
 
     if args.list:

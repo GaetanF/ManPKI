@@ -57,8 +57,8 @@ def set_ca():
         ca_param.validate()
         ca_param.save()
         return {'state': 'OK'}, 200
-    except:
-        return {'error': 'CA param not valid'}, 404
+    except BaseException as error:
+        return {'error': 'CA param not valid', 'exception': error.__repr__()}, 404
 
 
 @API.route("/ca/param/", "show ca param", method='GET', defaults={'param': None}, args=[

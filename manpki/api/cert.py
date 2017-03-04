@@ -39,8 +39,8 @@ def set_cert():
         cert_param.validate()
         cert_param.save()
         return {'state': 'OK'}, 200
-    except:
-        return {'state': 'NOK'}, 404
+    except BaseException as error:
+        return {'state': 'NOK', 'exception': error.__repr__()}, 404
 
 
 @API.route("/cert", "create [param=value]", method='PUT', args=[

@@ -48,8 +48,8 @@ def set_profile(profileid):
             profile.save()
             message = {'profile': profileid, 'message': 'created'}
             code = 200
-        except:
-            message = {'error': 'cannotcreate', 'profile': profileid}
+        except BaseException as error:
+            message = {'error': 'cannotcreate', 'profile': profileid, 'exception': error.__repr__()}
             code = 404
     else:
         message = {'error': 'notexist', 'profile': profileid}
@@ -68,7 +68,7 @@ def add_profile(profileid):
         Profile.get(where('name') == profileid)
         message = {'error': 'alreadyexist', 'profile': profileid}
         code = 404
-    except:
+    except BaseException:
         profile = Profile()
         log.info('Parameter : ' + json.dumps(request.json))
         data = request.json

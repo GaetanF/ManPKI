@@ -47,8 +47,8 @@ def set_extension(oid):
             extension.save()
             message = {'oid': oid, 'message': 'updated'}
             code = 200
-        except:
-            message = {'error': 'cannotupdate', 'oid': oid}
+        except BaseException as error:
+            message = {'error': 'cannotupdate', 'oid': oid, 'exception': error.__repr__()}
             code = 404
     else:
         message = {'error': 'notexist', 'oid': oid}
@@ -67,7 +67,7 @@ def add_extension(oid):
         ExtensionModel.get(where('oid') == oid)
         message = {'error': 'alreadyexist', 'oid': oid}
         code = 404
-    except:
+    except BaseException as error:
         data = request.get_json(silent=True)
         log.info('Parameter : ' + json.dumps(data))
         if 'type' in data and data['type'] in ('extended', 'keyusage'):
@@ -87,7 +87,7 @@ def add_extension(oid):
                 message = {'error': 'unable to add new extension', 'message': e.__repr__(), 'oid': oid}
                 code = 404
         else:
-            message = {'error': 'invalidtype', 'oid': oid}
+            message = {'error': 'invalidtype', 'oid': oid, 'exception': error.__repr__()}
             code = 500
 
     return message, code

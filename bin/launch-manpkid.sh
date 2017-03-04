@@ -1,3 +1,4 @@
+#!/bin/zsh
 availablepython=""
 dir=`pwd`"/../"
 for project in $(ls $dir);

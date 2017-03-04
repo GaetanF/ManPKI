@@ -1,17 +1,15 @@
 import os
 import OpenSSL
 import hashlib
-from OpenSSL import crypto
 from time import time
 from datetime import datetime, timedelta
-from pyasn1.codec.der import encoder, decoder
-from pyasn1.type import useful, univ
+from pyasn1.codec.der import decoder
+from pyasn1.type import univ
 from pytz import UTC
 
-from manpki.logger import log
 from manpki.tools.event import event
 from manpki.config import ConfigObject
-from manpki.asn1 import pem, rfc2560, rfc2459
+from manpki.asn1 import rfc2459
 from manpki.db import *
 
 
@@ -370,14 +368,14 @@ class SSL:
             bsConst += b", pathlen:0"
 
         ca.add_extensions([
-            crypto.X509Extension(b"basicConstraints", True, bsConst),
-            crypto.X509Extension(b"keyUsage", True, b"keyCertSign, cRLSign"),
-            crypto.X509Extension(b"subjectKeyIdentifier", False, b"hash", subject=ca),
+            OpenSSL.crypto.X509Extension(b"basicConstraints", True, bsConst),
+            OpenSSL.crypto.X509Extension(b"keyUsage", True, b"keyCertSign, cRLSign"),
+            OpenSSL.crypto.X509Extension(b"subjectKeyIdentifier", False, b"hash", subject=ca),
         ])
 
         if caparam.typeca == "rootca":
             ca.add_extensions([
-                crypto.X509Extension(b"authorityKeyIdentifier", False, b"keyid:always", issuer=ca)
+                OpenSSL.crypto.X509Extension(b"authorityKeyIdentifier", False, b"keyid:always", issuer=ca)
             ])
 
         # if EventManager.hasEvent("new_cert"):
@@ -387,14 +385,14 @@ class SSL:
         if crlparam.enable:
             crlUri = b"URI:" + crlparam.uri
             ca.add_extensions([
-                crypto.X509Extension(b"crlDistributionPoints", False, crlUri)
+                OpenSSL.crypto.X509Extension(b"crlDistributionPoints", False, crlUri)
             ])
 
         ocspparam = OcspParameter.get()
         if ocspparam.enable:
             ocspUri = b"OCSP;URI:" + ocspparam.uri
             ca.add_extensions([
-                crypto.X509Extension(b"authorityInfoAccess", False, ocspUri)
+                OpenSSL.crypto.X509Extension(b"authorityInfoAccess", False, ocspUri)
             ])
 
         # if caparam.typeca == "subca":
@@ -480,29 +478,29 @@ class SSL:
 
         bsConst = b"CA:FALSE"
         cert.add_extensions([
-            crypto.X509Extension(b"basicConstraints", True, bsConst),
-            crypto.X509Extension(b"keyUsage", True, SSL.get_key_usage_from_profile(profile)),
-            crypto.X509Extension(b"subjectKeyIdentifier", False, b"hash", subject=cert),
+            OpenSSL.crypto.X509Extension(b"basicConstraints", True, bsConst),
+            OpenSSL.crypto.X509Extension(b"keyUsage", True, SSL.get_key_usage_from_profile(profile)),
+            OpenSSL.crypto.X509Extension(b"subjectKeyIdentifier", False, b"hash", subject=cert),
         ])
         cert.add_extensions([
-            crypto.X509Extension(b"authorityKeyIdentifier", False, b"keyid:always", issuer=ca)
+            OpenSSL.crypto.X509Extension(b"authorityKeyIdentifier", False, b"keyid:always", issuer=ca)
         ])
         cert.add_extensions([
-            crypto.X509Extension(b"extendedKeyUsage", False, SSL.get_extended_key_usage_from_profile(profile))
+            OpenSSL.crypto.X509Extension(b"extendedKeyUsage", False, SSL.get_extended_key_usage_from_profile(profile))
         ])
 
         crlparam = CrlParameter.get()
         if crlparam.enable:
             crlUri = b"URI:" + crlparam.uri
             cert.add_extensions([
-                crypto.X509Extension(b"crlDistributionPoints", False, crlUri)
+                OpenSSL.crypto.X509Extension(b"crlDistributionPoints", False, crlUri)
             ])
 
         ocspparam = OcspParameter.get()
         if ocspparam.enable:
             ocspUri = b"OCSP;URI:" + ocspparam.uri
             cert.add_extensions([
-                crypto.X509Extension(b"authorityInfoAccess", False, ocspUri)
+                OpenSSL.crypto.X509Extension(b"authorityInfoAccess", False, ocspUri)
             ])
 
         cert_signed = SSL.sign(cert, SSL.get_ca_privatekey(), certparam.digest)
