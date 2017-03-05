@@ -56,10 +56,7 @@ class APIMethodArg:
     @staticmethod
     def is_valid_arg(dictarg):
         thearg = APIMethodArg.build_valid_arg(dictarg)
-        if thearg:
-            return True
-        else:
-            return False
+        return bool(thearg)
 
 
 class APIRoute:
@@ -137,10 +134,7 @@ class APIRoute:
     @staticmethod
     def is_valid_route(routedict):
         theroute = APIRoute.build_valid_route(routedict)
-        if theroute:
-            return True
-        else:
-            return False
+        return bool(theroute)
 
     def __repr__(self):
         leveler = "ANONYMOUS"

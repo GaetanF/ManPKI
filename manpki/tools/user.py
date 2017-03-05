@@ -32,11 +32,8 @@ class User:
     def exist(self):
         try:
             user = UserDB.get(where('username') == self._username)
-            if user:
-                return True
-            else:
-                return False
-        except:
+            return bool(user)
+        except BaseException:
             return False
 
     def generate_auth_token(self, expiration=600):

@@ -40,7 +40,8 @@ def set_profile(profileid):
     if profile:
         log.info('Update profile : ' + profileid)
         data = request.json
-        for name, field in profile:
+        for elt in profile:
+            name = elt[0]
             if not name.startswith("_") and name in data:
                 setattr(profile, name, data[name])
         try:
@@ -72,14 +73,15 @@ def add_profile(profileid):
         profile = Profile()
         log.info('Parameter : ' + json.dumps(request.json))
         data = request.json
-        for name, field in profile:
+        for elt in profile:
+            name = elt[0]
             if not name.startswith("_") and name in data:
                 setattr(profile, name, data[name])
         profile.name = profileid
         try:
             profile.validate()
-            id = profile.insert()
-            log.info('New profile add id : ' + id.__str__() + ' name : ' + profileid)
+            pid = profile.insert()
+            log.info('New profile add id : ' + pid.__str__() + ' name : ' + profileid)
             message = {'message': 'ok', 'profile': profileid}
             code = 200
         except Exception as e:

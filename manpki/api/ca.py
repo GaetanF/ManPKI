@@ -50,7 +50,8 @@ def set_ca():
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
     ca_param = CAParameter.get()
-    for name, field in ca_param:
+    for elt in ca_param:
+        name = elt[0]
         if not name.startswith("_") and name in data:
             setattr(ca_param, name, data[name])
     try:

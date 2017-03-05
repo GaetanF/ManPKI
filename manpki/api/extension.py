@@ -39,7 +39,8 @@ def set_extension(oid):
     if extension:
         log.info('Update extension : ' + oid)
         data = request.json
-        for name, field in extension:
+        for elt in extension:
+            name = elt[0]
             if not name.startswith("_") and name in data:
                 setattr(extension, name, data[name])
         try:
@@ -72,15 +73,16 @@ def add_extension(oid):
         log.info('Parameter : ' + json.dumps(data))
         if 'type' in data and data['type'] in ('extended', 'keyusage'):
             extension = ExtensionModel()
-            for name, field in extension:
+            for elt in extension:
+                name = elt[0]
                 if not name.startswith("_") and name in data:
                     setattr(extension, name, data[name])
             extension.oid = oid
             extension.type = data['type']
             try:
                 extension.validate()
-                id = extension.insert()
-                log.info('New extension add id : ' + id.__str__() + ' oid : ' + oid)
+                eid = extension.insert()
+                log.info('New extension add id : ' + eid.__str__() + ' oid : ' + oid)
                 message = {'message': 'ok', 'oid': oid}
                 code = 200
             except Exception as e:

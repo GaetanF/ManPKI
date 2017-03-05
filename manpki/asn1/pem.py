@@ -42,7 +42,8 @@ def readPemBlocksFromFile(fileObj, *markers):
 def readPemFromFile(fileObj,
                     startMarker='-----BEGIN CERTIFICATE-----',
                     endMarker='-----END CERTIFICATE-----'):
-    idx, substrate = readPemBlocksFromFile(fileObj, (startMarker, endMarker))
+    elt = readPemBlocksFromFile(fileObj, (startMarker, endMarker))
+    substrate = elt[1]
     return substrate
 
 

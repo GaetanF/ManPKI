@@ -95,10 +95,12 @@ class ReloaderLoop(object):
         self.log_reload(filename)
         sys.exit(3)
 
-    def trigger_reload_with_sleep(self):
+    @staticmethod
+    def trigger_reload_with_sleep():
         sys.exit(3)
 
-    def log_reload(self, filename):
+    @staticmethod
+    def log_reload(filename):
         filename = os.path.abspath(filename)
         log.info(' * Detected change in %r, reloading' % filename)
 

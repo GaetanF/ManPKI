@@ -24,8 +24,8 @@ def _convert_po_2_dict(po):
             plural = [entry.msgid_plural]
             result[key] = plural
             ordered_plural = sorted(entry.msgstr_plural.items())
-            for order, msg_str in ordered_plural:
-                plural.append(msg_str)
+            for elt in ordered_plural:
+                plural.append(elt[1])
     return result
 
 

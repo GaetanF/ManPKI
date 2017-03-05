@@ -57,19 +57,17 @@ class SSL:
     @staticmethod
     def get_cert_id(cert):
         cert_content = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
-        return hashlib.md5(cert_content).hexdigest()[:10].upper()
+        return hashlib.sha256(cert_content).hexdigest()[:20].upper()
 
     @staticmethod
     def get_ca():
-        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_ca_path(), "rt").read())
+        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_ca_path(), "rb").read())
 
     @staticmethod
     def get_ca_privatekey():
         log.info("Load private key : " + SSL.get_ca_privatekey_path())
         content_privatekey = open(SSL.get_ca_privatekey_path(), "rt").read()
-        print('caprivate')
         privatekey = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, content_privatekey)
-        print('caprivate2')
         return privatekey
 
     @staticmethod
@@ -85,7 +83,7 @@ class SSL:
 
     @staticmethod
     def read_cert(filename):
-        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(filename, "rt").read())
+        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(filename, "rb").read())
 
     @staticmethod
     def get_asn_cert_raw(certid):
@@ -138,22 +136,22 @@ class SSL:
 
     @staticmethod
     def get_all_certificates():
-        list = []
+        list_cert = []
         certdir = ManPKIObject.certdir + "/public/certificates/"
         for name in os.listdir(certdir):
             if name.endswith(".crt"):
-                list.append({'id': name[:-4], 'cert': SSL.read_cert(certdir + name)})
-        return list
+                list_cert.append({'id': name[:-4], 'cert': SSL.read_cert(certdir + name)})
+        return list_cert
 
     @staticmethod
     def get_json_all_certificates():
-        list = []
+        list_cert = []
         certdir = ManPKIObject.certdir + "/public/certificates/"
         for name in os.listdir(certdir):
             if name.endswith(".crt"):
                 certid = name[:-4]
-                list.append(SSL.display_cert(SSL.get_cert(certid)))
-        return list
+                list_cert.append(SSL.display_cert(SSL.get_cert(certid)))
+        return list_cert
 
     @staticmethod
     def get_cert(certid):
@@ -164,10 +162,10 @@ class SSL:
 
     @staticmethod
     def get_x509_name(x509name):
-        str = ""
+        str_name = ""
         for (name, value) in x509name.get_components():
-            str += name.decode('utf-8') + "=%s, " % value.decode('utf-8')
-        return str[:-2]
+            str_name += name.decode('utf-8') + "=%s, " % value.decode('utf-8')
+        return str_name[:-2]
 
     @staticmethod
     def decode_time(time):
@@ -202,12 +200,13 @@ class SSL:
         return cert
 
     @staticmethod
-    def parse_str_to_x509Name(string, x509obj):
+    def parse_str_to_x509name(string, x509obj):
         cpts = string.split("/")
-        x509Name = x509obj
+        x509name = x509obj
         for elt in cpts:
-            exec("x509Name.%s='%s'" % (elt.split("=")[0].upper(), elt.split("=")[1]))
-        return x509Name
+            #exec("x509name.%s='%s'" % (elt.split("=")[0].upper(), elt.split("=")[1]))
+            x509name[elt.split("=")[0].upper()] = elt.split("=")[1]
+        return x509name
 
     @staticmethod
     def generate_crl():
@@ -272,7 +271,8 @@ class SSL:
         keysusage = SSL.get_extended_key_usage()
         keys = str(profile.extended).split('|')
         a_keys = []
-        for (k, v) in keysusage.items():
+        for elt in keysusage.items():
+            k = elt[0]
             if k in keys:
                 a_keys.append(k)
         return a_keys
@@ -295,7 +295,8 @@ class SSL:
             if cert.get_extension(i).get_short_name() in "extendedKeyUsage":
                 val, _ = decoder.decode(cert.get_extension(i).get_data(), asn1Spec=univ.Sequence())
                 size_extendedkey = 0
-                for n, v in enumerate(val):
+                for elt in enumerate(val):
+                    v = elt[1]
                     size_extendedkey += 1
                     if v.__str__() not in extendedkeys:
                         extendkey_match = False
@@ -343,9 +344,9 @@ class SSL:
 
         ca = SSL.create_x509cert(pkey)
         subject = caparam.basecn + "/CN=" + caparam.name
-        subject_x509 = SSL.parse_str_to_x509Name(subject, ca.get_subject())
+        subject_x509 = SSL.parse_str_to_x509name(subject, ca.get_subject())
         if caparam.typeca == "rootca":
-            issuer_x509 = SSL.parse_str_to_x509Name(subject, ca.get_issuer())
+            issuer_x509 = SSL.parse_str_to_x509name(subject, ca.get_issuer())
 
         if caparam.email:
             subject_x509.emailAddress = caparam.email
@@ -463,7 +464,7 @@ class SSL:
             caparam = CAParameter.get()
             subject = caparam.basecn + "/CN=" + cn
 
-        subject_x509 = SSL.parse_str_to_x509Name(subject, cert.get_subject())
+        subject_x509 = SSL.parse_str_to_x509name(subject, cert.get_subject())
 
         issuer_x509 = ca.get_subject()
         if email:
@@ -556,7 +557,6 @@ class WebSSL:
             return crypto
 
     def generate_adhoc_ssl_pair(self, cn=None):
-        from random import random
         import sys
         crypto = self._get_openssl_crypto_module()
 
@@ -565,7 +565,7 @@ class WebSSL:
             cn = '*'
 
         cert = crypto.X509()
-        cert.set_serial_number(int(random() * sys.maxsize))
+        cert.set_serial_number(int(time() * sys.maxsize))
         cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(60 * 60 * 24 * 365)
 

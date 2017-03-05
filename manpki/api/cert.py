@@ -32,7 +32,8 @@ def set_cert():
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
     cert_param = CertParameter.get()
-    for name, field in cert_param:
+    for elt in cert_param:
+        name = elt[0]
         if not name.startswith("_") and name in data:
             setattr(cert_param, name, data[name])
     try:
