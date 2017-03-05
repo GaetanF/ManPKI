@@ -26,9 +26,9 @@ class APIMethodArg:
 
     validtype = ["int", "str", "bool", "email"]
 
-    def __init__(self, name, type, mandatory):
+    def __init__(self, name, vtype, mandatory):
         self.name = name
-        self.type = type
+        self.type = vtype
         self.mandatory = mandatory
 
     def __repr__(self):
@@ -50,7 +50,7 @@ class APIMethodArg:
                     tmparg.update({karg: kval})
         thearg = None
         if len(tmparg.keys()) == 3:
-            thearg = APIMethodArg(name=tmparg['name'], type=tmparg['type'], mandatory=tmparg['mandatory'])
+            thearg = APIMethodArg(name=tmparg['name'], vtype=tmparg['type'], mandatory=tmparg['mandatory'])
         return thearg
 
     @staticmethod

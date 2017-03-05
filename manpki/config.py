@@ -69,6 +69,19 @@ def get_config_file(paths=None):
             yield path
 
 
+def get_run_directory(paths=None):
+    """Generates (yields) the available run directory in the correct order."""
+    if DEBUG:
+        from manpki.logger import log
+        log.debug("Get RUN directory")
+    if paths is None:
+        paths = ['/var/run/manpki', '/var/tmp/manpki', './run']
+    for path in paths:
+        if os.path.isdir(path):
+            return path
+    return None
+
+
 def get_var_directory(paths=None):
     """Generates (yields) the available config files, in the correct order."""
     if DEBUG:

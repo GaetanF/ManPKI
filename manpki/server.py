@@ -6,7 +6,7 @@ from flask import Flask, g
 from gevent import socket
 import ssl
 
-from manpki.config import WEB_SECRET, envready
+from manpki.config import WEB_SECRET, envready, get_run_directory
 from manpki.tools import *
 from manpki.db import ServerParameter
 from manpki.i18n import *
@@ -148,7 +148,7 @@ def start():
         if host == 'socket':
             log.debug("Use Socket")
             listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock_name = '/tmp/manpki.sock'
+            sock_name = get_run_directory() + '/manpki.sock'
             if os.path.exists(sock_name):
                 os.remove(sock_name)
             listener.bind(sock_name)

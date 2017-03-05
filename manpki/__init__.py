@@ -9,14 +9,14 @@ _VERSION_FILE = os.path.join(_DIR, 'VERSION')
 def _get_version_from_git():
     import subprocess
     import re
-    subproc = subprocess.Popen(['git', 'describe', '--always'],
+    subproc = subprocess.Popen('/usr/bin/git describe --always',
                                stdout=subprocess.PIPE, stderr=open(os.devnull),
                                cwd=os.path.join(_DIR, os.path.pardir))
     out, err = subproc.communicate()
     if subproc.returncode != 0:
         raise subprocess.CalledProcessError(subproc.returncode, err)
     tag = out.strip()
-    subproc = subprocess.Popen(['git', 'branch', '--contains', 'HEAD'],
+    subproc = subprocess.Popen('/usr/bin/git branch --contains HEAD',
                                stdout=subprocess.PIPE, stderr=open(os.devnull),
                                cwd=os.path.join(_DIR, os.path.pardir))
     out, err = subproc.communicate()
