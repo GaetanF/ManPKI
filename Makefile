@@ -25,7 +25,7 @@ run:
 	PYTHONPATH=$(PYTHONPATH) ./bin/manpkid 
 
 test:
-	PYTHONPATH=$(PYTHONPATH) ./tests/manpki_tests.py
+	./tests/manpki_tests.py
 
 docs: version
 	$(MAKE) -C ./docs html
