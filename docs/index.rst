@@ -40,7 +40,7 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. |Build Status| image:: https://travis-ci.org/GaetanF/manpki.svg?branch=master
+.. |Build Status| image:: https://travis-ci.org/GaetanF/manpki.svg?branch=develop
    :target: https://travis-ci.org/GaetanF/manpki
 .. |Coverage Status| image:: https://codecov.io/gh/GaetanF/manpki/branch/develop/graph/badge.svg
    :target: https://codecov.io/gh/GaetanF/manpki
