@@ -12,7 +12,7 @@ install:
   - pip install -U tox codecov tox-travis
 before_script:
   - sudo useradd -rU manpki
-  - sudo manpkid -i
+  - sudo /usr/local/bin/manpkid -i
 script:
   - tox
 after_success:
