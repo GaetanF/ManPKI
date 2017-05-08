@@ -57,10 +57,10 @@ def _version():
 
     except IOError:
         pass
-    try:
-        version = _get_version_from_git()
-    except subprocess.CalledProcessError:
-        pass
+    #try:
+    #    version = _get_version_from_git()
+    #except subprocess.CalledProcessError:
+    #    pass
     version = _get_version_from_init()
     try:
         with open(_VERSION_FILE, 'w') as fdesc:
