@@ -79,6 +79,7 @@ clean:
 	./setup.py clean
 	rm -rf dist build MANIFEST .tox *.log
 	find . -name '*.pyc' -delete
+	rm manpki/VERSION
 
 vertest: version
 	echo "${VERSION}"
