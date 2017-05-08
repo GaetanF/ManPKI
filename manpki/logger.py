@@ -29,8 +29,8 @@ def mk_logger():
         ch = logging.StreamHandler()
         ch.setFormatter(f)
         log.addHandler(ch)
-    if not os.path.isdir(os.path.dirname(LOGFILE)):
-        LOGFILE='./manpkid.log'
+    if not os.path.isdir(os.path.dirname(LOGFILE)) or os.geteuid() != 0:
+        LOGFILE=os.path.expanduser('~/.manpki/log/manpkid.log')
     fh = logging.FileHandler(LOGFILE)
     fh.setFormatter(f)
     log.addHandler(fh)

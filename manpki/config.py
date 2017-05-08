@@ -76,8 +76,7 @@ def get_config_file(paths=None):
         log.debug("Get config file")
     if paths is None:
         paths = [os.path.join(path, 'manpki.conf')
-                 for path in ['/etc/manpki', '/usr/local/etc/manpki',
-                              '/usr/local/etc/manpki', './etc/manpki/', '../etc/manpki/']]
+                 for path in ['/etc/manpki', os.path.expanduser('~/.manpki')]]
     for path in paths:
         if os.path.isfile(path):
             yield path
@@ -89,7 +88,7 @@ def get_config_directory(paths=None):
         from manpki.logger import log
         log.debug("Get CONFIG directory")
     if paths is None:
-        paths = ['/etc/manpki', '/usr/local/etc/manpki', './manpki', './etc/manpki', '../etc/manpki']
+        paths = ['/etc/manpki', os.path.expanduser('~/.manpki')]
     for path in paths:
         if os.path.isdir(path) and os.access(path, os.W_OK):
             return path
@@ -102,7 +101,7 @@ def get_run_directory(paths=None):
         from manpki.logger import log
         log.debug("Get RUN directory")
     if paths is None:
-        paths = ['/var/run/manpki', '/run/manpki', './run/manpki/']
+        paths = ['/var/run/manpki', '/run/manpki', os.path.expanduser('~/.manpki')]
     for path in paths:
         if os.path.isdir(path) and os.access(path, os.W_OK):
             return path
@@ -115,8 +114,7 @@ def get_var_directory(paths=None):
         from manpki.logger import log
         log.debug("Get VAR directory")
     if paths is None:
-        paths = ['/var/lib/manpki', '/opt/manpki',
-                 '/usr/local/var/manpki', '/usr/local/var/lib/manpki', './var/manpki', '../var/manpki']
+        paths = ['/var/lib/manpki', os.path.expanduser('~/.manpki')]
     for path in paths:
         if os.path.isdir(path):
             return path
@@ -124,22 +122,29 @@ def get_var_directory(paths=None):
 
 
 def init_directory():
-    if not get_config_directory() and not os.path.exists("/etc/manpki"):
-        os.makedirs("/etc/manpki")
-    if not get_var_directory() and not os.path.exists("/var/lib/manpki"):
-        os.makedirs("/var/lib/manpki")
-        os.makedirs("/var/lib/manpki/cert")
-        os.makedirs("/var/lib/manpki/db")
-    elif get_var_directory():
-        path = get_var_directory()
-        if not os.path.exists(path+"/cert"):
+    if os.geteuid() == 0:
+        if not get_config_directory() and not os.path.exists("/etc/manpki"):
+            os.makedirs("/etc/manpki")
+        if not get_var_directory() and not os.path.exists("/var/lib/manpki"):
+            os.makedirs("/var/lib/manpki")
             os.makedirs("/var/lib/manpki/cert")
-        if not os.path.exists(path + "/db"):
             os.makedirs("/var/lib/manpki/db")
-    if not get_run_directory(['/var/run/manpki', '/run/manpki']):
-        os.makedirs("/var/run/manpki")
-    if not os.path.exists("/var/log/manpki"):
-        os.makedirs("/var/log/manpki")
+        elif get_var_directory():
+            path = get_var_directory()
+            if not os.path.exists(path+"/cert"):
+                os.makedirs("/var/lib/manpki/cert")
+            if not os.path.exists(path + "/db"):
+                os.makedirs("/var/lib/manpki/db")
+        if not get_run_directory(['/var/run/manpki', '/run/manpki']):
+            os.makedirs("/var/run/manpki")
+        if not os.path.exists("/var/log/manpki"):
+            os.makedirs("/var/log/manpki")
+    else:
+        if not os.path.exists(os.path.expanduser('~/.manpki')):
+            os.makedirs(os.path.expanduser('~/.manpki'))
+            os.makedirs(os.path.expanduser('~/.manpki/log'))
+            os.makedirs(os.path.expanduser('~/.manpki/cert'))
+            os.makedirs(os.path.expanduser('~/.manpki/db'))
 
 
 def init_acl():
@@ -277,44 +282,44 @@ def init_db():
 
 def init_files():
     path = None
-    if os.path.isdir('/usr/share/manpki'):
-        path = '/usr/share/manpki'
-    if os.path.isdir('/usr/local/share/manpki'):
-        path = '/usr/local/share/manpki'
-    if path:
-        from shutil import copyfile
-        import platform
+    if os.geteuid() == 0:
+        if os.path.isdir('/usr/share/manpki'):
+            path = '/usr/share/manpki'
+        if os.path.isdir('/usr/local/share/manpki'):
+            path = '/usr/local/share/manpki'
+        if path:
+            from shutil import copyfile
+            import platform
 
-        copyfile(path+'/config/manpki.conf', get_config_directory()+'/manpki.conf')
-        distro = platform.dist()[0]
-        distro_major_version = platform.dist()[1].split('.')[0]
+            copyfile(path+'/config/manpki.conf', get_config_directory()+'/manpki.conf')
+            distro = platform.dist()[0]
+            distro_major_version = platform.dist()[1].split('.')[0]
 
-        if distro == 'Ubuntu':
-            copyfile(path + '/startup/upstart/manpkid.conf', '/etc/init/manpkid.conf')
-        if distro in ['centos', 'redhat', 'debian', 'fedora']:
-            copyfile(path + '/startup/initd/manpkid', '/etc/init.d/manpkid')
-            if distro_major_version >= '7' and not distro == 'debian':
-                copyfile(path + '/startup/systemd/manpkid.service', '/usr/lib/systemd/system/manpkid.service')
-            elif distro_major_version >= '6' and not distro == 'debian':
+            if distro == 'Ubuntu':
                 copyfile(path + '/startup/upstart/manpkid.conf', '/etc/init/manpkid.conf')
+            if distro in ['centos', 'redhat', 'debian', 'fedora']:
+                copyfile(path + '/startup/initd/manpkid', '/etc/init.d/manpkid')
+                if distro_major_version >= '7' and not distro == 'debian':
+                    copyfile(path + '/startup/systemd/manpkid.service', '/usr/lib/systemd/system/manpkid.service')
+                elif distro_major_version >= '6' and not distro == 'debian':
+                    copyfile(path + '/startup/upstart/manpkid.conf', '/etc/init/manpkid.conf')
     else:
         config_file = get_config_directory()+'/manpki.conf'
         with open(config_file, 'w') as f:
-            f.write("[default]")
-            f.write("")
-            f.write("[server]")
-            f.write("host = socket")
-            f.write("cert = ")
-            f.write("port = 0")
-            f.write("key = ")
-            f.write()
+            f.write("[default]\n\n")
+            f.write("[server]\n")
+            f.write("host = socket\n")
+            f.write("cert = \n")
+            f.write("port = 0\n")
+            f.write("key = \n\n")
             f.close()
 
 
 def setup():
     init_directory()
     init_db()
-    init_acl()
+    if os.geteuid() == 0:
+        init_acl()
     init_files()
 
 
