@@ -171,7 +171,6 @@ class ManpkiTestCase(unittest.TestCase):
         rv = self.get('/discovery')
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(len(rv.data), 1)
-        print(rv.data)
 
     def test_locales_fr_unknown(self):
         rv = self.get('/locale/fr')

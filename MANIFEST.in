@@ -3,6 +3,8 @@ include Makefile README.md
 graft tests
 graft tools
 graft docs
+graft manpki/i18n
+graft manpki/templates
 
 global-exclude *.py[co]
 
