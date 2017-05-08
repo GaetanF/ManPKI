@@ -15,7 +15,6 @@ import manpki.tools.api
 class Object(object):
     data = None
     status_code = None
-    pass
 
 
 def init_db(path):
@@ -44,7 +43,7 @@ def init_db(path):
     param.insert({'object': 'mail', 'enable': False, 'host': 'smtp', 'sender': 'manpki@example.com'})
     param.insert({'object': 'server', 'sslcert': 'cert.pem', 'sslkey': 'key.pem', 'host': 'socket', 'port': 8080})
 
-    userdb = db.table('user')
+    db.table('user')
 
     db.close()
 
@@ -107,14 +106,16 @@ class ManpkiTestCase(unittest.TestCase):
 
     def test_entry_point(self):
         rv = self.app.get('/')
-        assert 'Welcome to the ManPKI API. Please read API documentation.' in rv.data.decode('utf-8')
+        self.assertEqual(rv.data.decode('utf-8'), 'Welcome to the ManPKI API. Please read API documentation.')
 
     def test_ping(self):
         rv = self.app.get('/ping')
         self.assertEqual(rv.status_code, 200)
         remote_data = json.loads(rv.data.decode('utf-8'))
         self.assertEqual(len(remote_data), 3)
-        self.assertEqual(list(remote_data.keys()), ["hostname", "message", "secret"])
+        data_keys = list(remote_data.keys())
+        data_keys.sort()
+        self.assertEqual(data_keys, ["hostname", "message", "secret"])
         self.assertEqual(remote_data['message'], "pong")
         self.assertEqual(remote_data['hostname'], os.uname()[1])
         self.assertGreater(len(remote_data['secret']), 0)
@@ -124,7 +125,9 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.status_code, 200)
         remote_data = json.loads(rv.data.decode('utf-8'))
         self.assertEqual(len(remote_data), 4)
-        self.assertEqual(list(remote_data.keys()), ["hostname", "message", "secret", "token"])
+        data_keys = list(remote_data.keys())
+        data_keys.sort()
+        self.assertEqual(data_keys, ["hostname", "message", "secret", "token"])
         self.assertEqual(remote_data['message'], "login")
         self.assertEqual(remote_data['hostname'], os.uname()[1])
         self.assertGreater(len(remote_data['secret']), 0)

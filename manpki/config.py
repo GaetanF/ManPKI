@@ -102,8 +102,7 @@ def get_run_directory(paths=None):
         from manpki.logger import log
         log.debug("Get RUN directory")
     if paths is None:
-        paths = ['/var/run/manpki', '/run/manpki', '/tmp/',
-                              '/var/tmp/manpki']
+        paths = ['/var/run/manpki', '/run/manpki', './run/manpki/']
     for path in paths:
         if os.path.isdir(path) and os.access(path, os.W_OK):
             return path
@@ -272,7 +271,7 @@ def init_db():
     param.insert({'object': 'server', 'sslcert': 'cert.pem', 'sslkey': 'key.pem', 'host': 'socket', 'port': 8080})
 
     ## Users
-    userdb = db.table('user')
+    db.table('user')
     db.close()
 
 
