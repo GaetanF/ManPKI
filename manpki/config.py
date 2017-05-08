@@ -76,8 +76,8 @@ def get_config_file(paths=None):
         log.debug("Get config file")
     if paths is None:
         paths = [os.path.join(path, 'manpki.conf')
-                 for path in ['/etc', '/etc/manpki', '/usr/local/etc',
-                              '/usr/local/etc/manpki', './etc', '../etc']]
+                 for path in ['/etc/manpki', '/usr/local/etc/manpki',
+                              '/usr/local/etc/manpki', './etc/manpki/', '../etc/manpki/']]
     for path in paths:
         if os.path.isfile(path):
             yield path
