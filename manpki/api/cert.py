@@ -1,3 +1,13 @@
+"""
+    manpki.api.cert
+    ~~~~~~~~~~~~~~~
+
+    Certificate part API.
+    Accessible by /v1.0/api/cert url
+
+    :copyright: (c) 2017 by Gaëtan FEREZ.
+    :license: BSD, see LICENSE for more details.
+"""
 from flask import json, request
 from tinydb import where
 from manpki.tools import SSL, API, multi_auth
@@ -11,6 +21,14 @@ from manpki.db import CertParameter, Profile
     {"name": "certid", "type": "str", "mandatory": False}], level=API.USER)
 @multi_auth.login_required
 def show_cert(certid):
+    """Show all cert or specific cert information
+
+    :param: certid Certificate Identifier
+
+    :shell: show cert
+    :context: none
+    :return: ca information
+    """
     if certid:
         if SSL.check_cert_exist(certid):
             cert = SSL.display_cert(SSL.get_cert(certid))
@@ -29,6 +47,15 @@ def show_cert(certid):
 ], level=API.USER, context="cert")
 @multi_auth.login_required
 def set_cert():
+    """Set cert element
+
+    :param: basecn Base CN of the next certificate
+    :param: email Email for the next certificate
+
+    :shell: set cert
+    :context: cert
+    :return: information if element are correctly set
+    """
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
     cert_param = CertParameter.get()
@@ -51,6 +78,16 @@ def set_cert():
 ], level=API.USER, context="cert")
 @multi_auth.login_required
 def add_cert():
+    """Create new certificate
+
+    :param: cn CN of the certificate
+    :param: mail Email for the certificate
+    :param: profile SSL Profile
+
+    :shell: create
+    :context: cert
+    :return: information of the new certificate
+    """
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
     try:
@@ -74,11 +111,19 @@ def add_cert():
     return message, code
 
 
-@API.route("/ca/param/", "show ca param", method='GET', defaults={'param': None}, args=[
+@API.route("/cert/param/", "show cert param", method='GET', defaults={'param': None}, args=[
     {"name": "param", "type": "str", "mandatory": False}], level=API.USER)
-@API.route("/ca/param/<param>", "show ca param [param]", method='GET', args=[
+@API.route("/cert/param/<param>", "show cert param [param]", method='GET', args=[
     {"name": "param", "type": "str", "mandatory": False}], level=API.USER)
 def get_cert_param(param):
+    """Get certificate parameter
+
+    :param: param Specific parameter
+
+    :shell: show cert param
+    :context: None
+    :return: information of the certificate parameter
+    """
     cert_param = CertParameter.get()
     if param:
         the_return = {param: getattr(cert_param, param)}

@@ -7,7 +7,7 @@ from manpki.tools.api import *
 from manpki.tools.ssl import *
 from manpki.tools.user import *
 
-allowed_paths = ["/ping", "/logout"]
+allowed_paths = ["/ping", "/login", "/logout"]
 basic_auth = HTTPBasicAuth()
 token_auth = HTTPTokenAuth('ManPKI')
 multi_auth = MultiAuth(basic_auth, token_auth)

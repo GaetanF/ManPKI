@@ -10,6 +10,14 @@ from manpki.db import Profile
 @API.route("/profile/<profileid>", "show profile [param]", method='GET', args=[
     {"name": "profileid", "type": "str", "mandatory": False}], level=API.USER)
 def show_profile(profileid):
+    """Show all or specific SSL Profile
+
+    :param: profileid ID of the profile
+
+    :shell: show profile
+    :context: None
+    :return: information of the profile
+    """
     if profileid:
         profile = Profile.get(where('name') == profileid)
         if profile:
@@ -36,6 +44,14 @@ def show_profile(profileid):
 ], level=API.USER, context="profile")
 @multi_auth.login_required
 def set_profile(profileid):
+    """Set profile
+
+    :param: profileid ID of the profile
+
+    :shell: set profile
+    :context: profile
+    :return: information of the profile
+    """
     profile = Profile.get(where('name') == profileid)
     if profile:
         log.info('Update profile : ' + profileid)
@@ -64,6 +80,14 @@ def set_profile(profileid):
 ], level=API.USER, context="profile")
 @multi_auth.login_required
 def add_profile(profileid):
+    """Add a new profile
+
+    :param: profileid ID of the profile
+
+    :shell: add profile
+    :context: profile
+    :return: information of the profile
+    """
     log.info('Add new profile : ' + profileid)
     try:
         Profile.get(where('name') == profileid)
@@ -95,6 +119,14 @@ def add_profile(profileid):
     {"name": "profileid", "type": "str", "mandatory": False}], level=API.USER)
 @multi_auth.login_required
 def delete_profile(profileid):
+    """Delete a profile
+
+    :param: profileid ID of the profile
+
+    :shell: delete profile
+    :context: profile
+    :return: message about the profile deletion
+    """
     log.info('Delete profile : ' + profileid)
     try:
         profile = Profile.get(where('name') == profileid)

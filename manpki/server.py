@@ -5,6 +5,7 @@ from flask import Flask, g
 
 from gevent import socket
 import ssl
+import pwd
 
 from manpki.config import WEB_SECRET, envready, get_run_directory
 from manpki.tools import *
@@ -12,7 +13,7 @@ from manpki.db import ServerParameter
 from manpki.i18n import *
 from manpki.templates import *
 
-import manpki.api
+import manpki.db
 
 load_api_modules()
 
@@ -23,7 +24,6 @@ app.secret_key = WEB_SECRET
 # api = flask_restful.Api(app)
 
 API.build_routes(app)
-
 
 # for rule in app.url_map.iter_rules():
 #    log.info(rule)
@@ -37,6 +37,12 @@ def page_internal_server_error(error):
 
 @app.errorhandler(404)
 def page_not_found(error):
+    log.error("Page not found : %s" % error)
+    return {'error': 'Page not found'}, 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(error):
     log.error("Page not found : %s" % error)
     return {'error': 'Page not found'}, 404
 
@@ -67,7 +73,8 @@ def verify_token(token):
 def verify_password(username, password):
     user = User(username=username)
     server_param = ServerParameter.get()
-    if user.authenticate(password) or server_param.host == 'socket':
+    if server_param.host != 'socket' and user.authenticate(password) \
+            or (server_param.host == 'socket' and username in [x[0] for x in pwd.getpwall()]):
         g.user = user
         session['username'] = username
         return True
@@ -95,7 +102,7 @@ def get_api_discovery():
 def get_locales(lang):
     locales = None
     if lang_is_defined(lang):
-        locales = get_json_lang(lang)
+        locales = json.loads(get_json_lang(lang))
     return {'lang': lang, 'locales': locales}, 200
 
 
@@ -129,8 +136,10 @@ def info():
 @app.route('/login')
 @multi_auth.login_required
 def login():
+    if 'secretjose' not in session:
+        session['secretjose'] = generate_sha256_string()
     token = g.user.generate_auth_token()
-    return {'message': 'login', 'hostname': os.uname()[1], 'token': token}, 200
+    return {'message': 'login', 'hostname': os.uname()[1], 'secret': session['secretjose'], 'token': token}, 200
 
 
 @app.route('/logout')
@@ -181,4 +190,4 @@ def daemon_starter():
         from manpki.tools.reloader import run_with_reloader
         run_with_reloader(start)
     else:
-        log.critical("Cannot start ManPKID, the environnement isn't ready")
+        log.critical("Cannot start ManPKID, the environnement isn't ready. Run 'manpkid -s' to setup env.")

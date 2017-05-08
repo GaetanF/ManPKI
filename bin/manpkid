@@ -28,10 +28,20 @@ def main():
                         help="show version")
     parser.add_argument("-D", "--debug", action="store_true",
                         help="debug mode")
+    parser.add_argument("-l", "--logfile", action="store",
+                        help="log file", default="/var/log/manpki/manpkid.log")
     parser.add_argument("-d", "--daemon", action="store_true",
                         help="daemon")
+    parser.add_argument("-i", "--init", action="store_true", help="initialize manpki")
 
     args = parser.parse_args()
+    import logging
+    if args.logfile:
+        import builtins
+        builtins.LOGFILE = args.logfile
+    if args.daemon:
+        import builtins
+        builtins.DAEMON = True
     if args.debug:
         import builtins
         builtins.DEBUG = True
@@ -39,9 +49,18 @@ def main():
         from manpki import show_version
         show_version()
         sys.exit()
+    if args.init:
+        from manpki.config import setup
+        setup()
+        logging.info("ManPKI is ready !")
+        sys.exit()
 
-    from manpki.server import daemon_starter
-    daemon_starter()
+    from manpki.config import envready
+    if envready():
+        from manpki.server import daemon_starter
+        daemon_starter()
+    else:
+        logging.critical("Cannot start ManPKID, the environnement isn't ready. Run 'manpkid -i' to setup env.")
 
 
 if __name__ == "__main__":

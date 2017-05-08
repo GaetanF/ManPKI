@@ -10,6 +10,14 @@ from manpki.db import ExtensionModel
 @API.route("/extension/<oid>", "show extension [param]", method='GET', args=[
     {"name": "oid", "type": "str", "mandatory": False}], level=API.USER)
 def show_extension(oid):
+    """Show all or specific SSL Extension
+
+    :param: oid OID of the extension
+
+    :shell: show extension
+    :context: None
+    :return: information of the extension
+    """
     if oid:
         log.info('Search oid : ' + oid)
         extension = ExtensionModel.get(where('oid') == oid)
@@ -35,6 +43,14 @@ def show_extension(oid):
 ], level=API.USER, context="extension")
 @multi_auth.login_required
 def set_extension(oid):
+    """Set an extension
+
+    :param: oid OID of the extension
+
+    :shell: set extension
+    :context: extension
+    :return: information of the extension
+    """
     extension = ExtensionModel.get(where('oid') == oid)
     if extension:
         log.info('Update extension : ' + oid)
@@ -63,6 +79,14 @@ def set_extension(oid):
 ], level=API.USER, context="extension")
 @multi_auth.login_required
 def add_extension(oid):
+    """Add a new extension
+
+    :param: oid OID of the extension
+
+    :shell: add extension
+    :context: extension
+    :return: information of the extension
+    """
     log.info('Add new extension : ' + oid)
     try:
         ExtensionModel.get(where('oid') == oid)
@@ -99,6 +123,14 @@ def add_extension(oid):
     {"name": "oid", "type": "str", "mandatory": False}], level=API.USER, context="extension")
 @multi_auth.login_required
 def delete_extension(oid):
+    """Delete an extension
+
+    :param: oid OID of the extension
+
+    :shell: delete extension
+    :context: extension
+    :return: message about the deletion
+    """
     log.info('Delete extension : ' + oid)
     try:
         extension = ExtensionModel.get(where('oid') == oid)

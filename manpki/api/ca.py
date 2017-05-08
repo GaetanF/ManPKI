@@ -1,3 +1,13 @@
+"""
+    manpki.api.ca
+    ~~~~~~~~~~~~~
+
+    CA part API.
+    Accessible by /v1.0/api/ca url
+
+    :copyright: (c) 2017 by Gaëtan FEREZ.
+    :license: BSD, see LICENSE for more details.
+"""
 from flask import json, request
 
 from manpki.tools import SSL, API, multi_auth
@@ -8,6 +18,12 @@ from manpki.db import CAParameter
 @API.route("/ca", "show ca", method='GET', level=API.USER)
 @multi_auth.login_required
 def show_ca():
+    """Show CA Information
+
+    :shell: show ca
+    :context: None
+    :return: ca information
+    """
     if SSL.check_ca_exist():
         ca = SSL.display_cert(SSL.get_ca())
         return ca, 200
@@ -22,6 +38,15 @@ def show_ca():
 ])
 @multi_auth.login_required
 def create_ca():
+    """Create a CA
+
+    :param: force if present force the creation of the ca even if already exist
+
+    :shell: create
+    :context: ca
+
+    :return: json info about the new ca
+    """
     if not SSL.check_ca_exist():
         SSL.create_ca()
         code = 200
@@ -46,6 +71,10 @@ def create_ca():
 ])
 @multi_auth.login_required
 def set_ca():
+    """Set parameter to the CA
+
+    :return: boolean if parameter are correctly set
+    """
     print(request)
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
@@ -68,6 +97,10 @@ def set_ca():
     {"name": "param", "type": "str", "mandatory": False}], level=API.USER)
 @multi_auth.login_required
 def get_caparam(param):
+    """Get specifed or all parameter of the CA
+
+    :return: json info about parameters of the ca
+    """
     print(param)
     ca_param = CAParameter.get()
     if param and hasattr(ca_param, param):

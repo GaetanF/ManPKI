@@ -10,7 +10,7 @@ except ImportError:
 
 def mk_logger():
     log = logging.getLogger()  # root logger
-    from manpki.config import DEBUG
+    from manpki.config import DEBUG, LOGFILE, DAEMON
     if DEBUG:
         log.setLevel(logging.DEBUG)
     else:
@@ -25,9 +25,15 @@ def mk_logger():
                                                   'CRITICAL': 'bold_red'})
     else:
         f = logging.Formatter(line_format, date_format)
-    ch = logging.StreamHandler()
-    ch.setFormatter(f)
-    log.addHandler(ch)
+    if not DAEMON:
+        ch = logging.StreamHandler()
+        ch.setFormatter(f)
+        log.addHandler(ch)
+    if not os.path.isdir(os.path.dirname(LOGFILE)):
+        LOGFILE='./manpkid.log'
+    fh = logging.FileHandler(LOGFILE)
+    fh.setFormatter(f)
+    log.addHandler(fh)
     return logging.getLogger(__name__)
 
 

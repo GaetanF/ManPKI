@@ -10,6 +10,9 @@ from setuptools import find_packages
 
 VERSION = __import__('manpki').VERSION
 
+with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
+    long_description = readme.read()
+
 
 def running_under_virtualenv():
     if hasattr(sys, 'real_prefix'):
@@ -39,43 +42,36 @@ if os.name == 'nt':
 
 else:
     data_files = [
-        ('/usr/share/doc/manpki',
-            ['doc/README.md',
-             'doc/INSTALL.md']),
-        ('/usr/share/manpki/tools', ['tools/manageUser.py', 'tools/initDatabase.py']),
-        ('/var/run/manpki', []),
-        ('/var/lib/manpki', []),
-        ('/var/lib/manpki/cert', []),
-        ('/var/lib/manpki/cert/private', []),
-        ('/var/lib/manpki/cert/public', []),
-        ('/var/lib/manpki/cert/public/certificates', []),
-        ('/var/lib/manpki/cert/public/ca', []),
-        ('/var/lib/manpki/db', []),
-        ('/var/log/manpki', [])
+        ('share/manpki/tools', ['tools/manageUser.py', 'tools/initDatabase.py']),
+        ('share/manpki/config', ['etc/manpki/manpki.conf']),
+        ('share/manpki/startup', []),
+        ('share/manpki/startup/upstart', ['tools/upstart/manpkid.conf']),
+        ('share/manpki/startup/initd', ['tools/initd/manpkid']),
+        ('share/manpki/startup/systemd', ['tools/systemd/manpkid.service']),
     ]
 
-    distro = platform.dist()[0]
-    distro_major_version = platform.dist()[1].split('.')[0]
+    #distro = platform.dist()[0]
+    #distro_major_version = platform.dist()[1].split('.')[0]
 
-    if running_under_virtualenv():
-        data_files.append(('/etc/manpki',
-                           glob('etc/*.conf')))
-    else:
-        data_files.append(('/etc/manpki',
-                           glob('etc/*.conf')))
+    #if running_under_virtualenv():
+    #    data_files.append(('/etc/manpki',
+    #                       glob('etc/*.conf')))
+    #else:
+    #    data_files.append(('/etc/manpki',
+    #                       glob('etc/*.conf')))
 
-        if distro == 'Ubuntu':
-            data_files.append(('/etc/init',
-                               ['debian/upstart/manpkid.conf']))
-        if distro in ['centos', 'redhat', 'debian', 'fedora']:
-            data_files.append(('/etc/init.d',
-                               ['bin/init.d/manpkid']))
-            if distro_major_version >= '7' and not distro == 'debian':
-                data_files.append(('/usr/lib/systemd/system',
-                                   ['rpm/systemd/manpkid.service']))
-            elif distro_major_version >= '6' and not distro == 'debian':
-                data_files.append(('/etc/init',
-                                   ['rpm/upstart/manpkid.conf']))
+    #    if distro == 'Ubuntu':
+    #        data_files.append(('/etc/init',
+    #                           ['tools/upstart/manpkid.conf']))
+    #    if distro in ['centos', 'redhat', 'debian', 'fedora']:
+    #        data_files.append(('/etc/init.d',
+    #                           ['tools/initd/manpkid']))
+    #        if distro_major_version >= '7' and not distro == 'debian':
+    #            data_files.append(('/usr/lib/systemd/system',
+    #                               ['tools/systemd/manpkid.service']))
+    #        elif distro_major_version >= '6' and not distro == 'debian':
+    #            data_files.append(('/etc/init',
+    #                               ['tools/upstart/manpkid.conf']))
 
 setup(
 
@@ -90,7 +86,7 @@ setup(
     author_email="manpki@ferez.fr",
 
     description="X509 PKI Manager",
-    long_description=open('README.md').read(),
+    long_description=long_description,
 
     # Dependency Manager
     #
@@ -127,6 +123,7 @@ setup(
 
     scripts=['bin/manpkid'],
 
+    include_package_data=True,
     data_files=data_files,
 
 )

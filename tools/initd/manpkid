@@ -13,16 +13,12 @@
 # Author:       Gaetan Ferez <gaetan@ferez.fr>
 #
 APPNAME=manpki
-USER=manpki
-PATH=/bin:/usr/bin:/sbin:/usr/sbin
-#ACTIVATE=/home/www/project/env/bin/activate
-ACTIVATE=/Users/ferezgaetan/.venv/manpki/bin/activate
-APPMODULE=manpki:application
-DAEMON=manpkid
-BIND=127.0.0.1:8000
-PIDFILE=/var/run/manpkid.pid
+PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+DAEMON=/usr/local/bin/manpkid
+DAEMON_USER=manpki
+DAEMON_OPTS="-d"
+PIDFILE=/var/run/manpki/manpkid.pid
 LOGFILE=/var/log/$DAEMON.log
-WORKERS=2
 
 
 . /lib/lsb/init-functions
@@ -36,14 +32,13 @@ fi
 
 case "$1" in
   start)
-        log_daemon_msg "Starting deferred execution scheduler" "$APPNAME"
-        source $ACTIVATE
-        $DAEMON --daemon --bind=$BIND --pid=$PIDFILE --workers=$WORKERS --user=$USER --log-file=$LOGFILE $APPMODULE
+        log_daemon_msg "Starting $APPNAME daemon"
+	start-stop-daemon --start --background --pidfile $PIDFILE --make-pidfile --user $DAEMON_USER --chuid $DAEMON_USER --exec $DAEMON -- $DAEMON_OPTS
         log_end_msg $?
     ;;
   stop)
-        log_daemon_msg "Stopping deferred execution scheduler" "APPNAME"
-        killproc -p $PIDFILE $DAEMON
+        log_daemon_msg "Stopping $APPNAME daemon"
+	start-stop-daemon --stop --pidfile $PIDFILE --retry 10
         log_end_msg $?
     ;;
   force-reload|restart)

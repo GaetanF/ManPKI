@@ -11,6 +11,7 @@ from manpki.config import TOKEN_SECRET
 class User:
     _username = None
     _roles = []
+    token_expiration = None
 
     def __init__(self, username):
         self._username = username
@@ -38,6 +39,7 @@ class User:
 
     def generate_auth_token(self, expiration=600):
         expire = datetime.utcnow() + timedelta(seconds=expiration)
+        self.token_expiration = expire
         return jwt.encode({'username': self._username, 'exp': expire}, TOKEN_SECRET, algorithm='HS256')
 
     def __repr__(self):
