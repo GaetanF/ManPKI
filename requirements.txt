@@ -10,7 +10,7 @@ pyasn1==0.1.9
 pytz==2016.10
 setuptools==32.3.1
 tinydb==3.2.1
-tinydb_jsonorm==0.1.0
+tinydb-jsonorm==0.2.1
 pyOpenSSL==17.0.0
 jose==1.0.0
 pam==0.1.4
