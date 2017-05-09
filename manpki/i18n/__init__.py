@@ -29,28 +29,20 @@ def _convert_po_2_dict(po):
     return result
 
 
-def _po_convert(po_file, encoding=None, pretty_print=False):
-    if encoding is None:
-        po = polib.pofile(po_file,
-                          autodetect_encoding=True)
-    else:
-        po = polib.pofile(po_file,
-                          autodetect_encoding=False,
-                          encoding=encoding)
+def _po_convert(po_file):
+    po = polib.pofile(po_file,
+                      autodetect_encoding=False,
+                      encoding="UTF-8")
 
     data = _convert_po_2_dict(po)
 
-    if not pretty_print:
-        result = json.dumps(data, ensure_ascii=False, sort_keys=True)
-    else:
-        result = json.dumps(data, sort_keys=True, indent=4 * ' ',
-                            ensure_ascii=False)
+    result = json.dumps(data, ensure_ascii=False, sort_keys=True)
 
     return result
 
 
 def get_json_lang(lang):
-    return _po_convert(get_path_lang(lang), encoding="UTF-8")
+    return _po_convert(get_path_lang(lang))
 
 
 def get_path_lang(lang):

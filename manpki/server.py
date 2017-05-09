@@ -43,8 +43,8 @@ def page_not_found(error):
 
 @app.errorhandler(405)
 def method_not_allowed(error):
-    log.error("Page not found : %s" % error)
-    return {'error': 'Page not found'}, 404
+    log.error("Method not allowed : %s" % error)
+    return {'error': 'Method not allowed'}, 405
 
 
 @app.errorhandler(Exception)
@@ -92,7 +92,6 @@ def default_page():
 def get_api_discovery():
     disco_api = []
     for rule in API.routes:
-        log.info(rule)
         if rule.is_authorized():
             disco_api.append(rule.json())
     return {'api': disco_api}, 200

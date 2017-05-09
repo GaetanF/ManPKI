@@ -10,6 +10,14 @@ from tinydb import TinyDB
 import jose
 import manpki.db
 import manpki.tools.api
+import manpki.api
+from io import StringIO
+from unittest.mock import patch
+import logging
+
+for h in logging.getLogger().handlers:
+    logging.getLogger().removeHandler(h)
+logging.getLogger().addHandler(logging.NullHandler())
 
 
 class Object(object):
@@ -104,6 +112,54 @@ class ManpkiTestCase(unittest.TestCase):
     def delete(self, path):
         return self._query(path, 'DELETE')
 
+    def test_show_version(self):
+        with patch('sys.stdout', new=StringIO()) as fakeOutput:
+            manpki.show_version()
+            msg = "ManPKI by {}\nVersion : {}".format(manpki.AUTHOR, manpki.VERSION)
+            self.assertEqual(fakeOutput.getvalue().strip(), msg)
+
+    def test_get_none_config_directory(self):
+        import builtins
+        import importlib
+        builtins.DEBUG = True
+        importlib.reload(manpki.config)
+        config_dir = manpki.config.get_config_directory([])
+        self.assertIsNone(config_dir)
+
+    def test_get_none_config_file(self):
+        import builtins
+        import importlib
+        builtins.DEBUG = True
+        importlib.reload(manpki.config)
+        config_dir = manpki.config.get_config_file([])
+        self.assertEqual(list(config_dir), [])
+
+    def test_get_none_var_directory(self):
+        import builtins
+        import importlib
+        builtins.DEBUG = True
+        importlib.reload(manpki.config)
+        var_dir = manpki.config.get_var_directory([])
+        self.assertIsNone(var_dir)
+
+    def test_get_none_run_directory(self):
+        import builtins
+        import importlib
+        builtins.DEBUG = True
+        importlib.reload(manpki.config)
+        run_dir = manpki.config.get_run_directory([])
+        self.assertIsNone(run_dir)
+
+    def test_page_not_found(self):
+        rv = self.app.get('/not_a_page')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(json.loads(rv.data.decode('utf-8')), {'error': 'Page not found'})
+
+    def test_method_not_allowed(self):
+        rv = self.app.open('/', method='METHOD')
+        self.assertEqual(rv.status_code, 405)
+        self.assertEqual(json.loads(rv.data.decode('utf-8')), {'error': 'Method not allowed'})
+
     def test_entry_point(self):
         rv = self.app.get('/')
         self.assertEqual(rv.data.decode('utf-8'), 'Welcome to the ManPKI API. Please read API documentation.')
@@ -171,6 +227,7 @@ class ManpkiTestCase(unittest.TestCase):
         rv = self.get('/discovery')
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(len(rv.data), 1)
+        self.assertGreater(len(rv.data['api']), 1)
 
     def test_locales_fr_unknown(self):
         rv = self.get('/locale/fr')
