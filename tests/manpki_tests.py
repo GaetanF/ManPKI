@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import os
+import sys
 import manpki.server
 import unittest
 import json
@@ -14,6 +15,11 @@ import manpki.api
 from io import StringIO
 from unittest.mock import patch
 import logging
+
+if sys.version_info < (3, 4):
+    import imp as importlib
+else:
+    import importlib
 
 for h in logging.getLogger().handlers:
     logging.getLogger().removeHandler(h)
@@ -120,7 +126,6 @@ class ManpkiTestCase(unittest.TestCase):
 
     def test_get_none_config_directory(self):
         import builtins
-        import importlib
         builtins.DEBUG = True
         importlib.reload(manpki.config)
         config_dir = manpki.config.get_config_directory([])
@@ -128,7 +133,6 @@ class ManpkiTestCase(unittest.TestCase):
 
     def test_get_none_config_file(self):
         import builtins
-        import importlib
         builtins.DEBUG = True
         importlib.reload(manpki.config)
         config_dir = manpki.config.get_config_file([])
@@ -136,7 +140,6 @@ class ManpkiTestCase(unittest.TestCase):
 
     def test_get_none_var_directory(self):
         import builtins
-        import importlib
         builtins.DEBUG = True
         importlib.reload(manpki.config)
         var_dir = manpki.config.get_var_directory([])
@@ -144,7 +147,6 @@ class ManpkiTestCase(unittest.TestCase):
 
     def test_get_none_run_directory(self):
         import builtins
-        import importlib
         builtins.DEBUG = True
         importlib.reload(manpki.config)
         run_dir = manpki.config.get_run_directory([])
