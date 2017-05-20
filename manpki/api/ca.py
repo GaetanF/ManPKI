@@ -85,20 +85,24 @@ def set_ca():
 
     :return: boolean if parameter are correctly set
     """
-    print(request)
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
-    ca_param = CAParameter.get()
-    for elt in ca_param:
-        name = elt[0]
-        if not name.startswith("_") and name in data:
-            setattr(ca_param, name, data[name])
-    try:
-        ca_param.validate()
-        ca_param.save()
-        return {'state': 'OK'}, 200
-    except BaseException as error:
-        return {'error': 'CA param not valid', 'exception': error.__repr__()}, 404
+    keys = list(data.keys())
+    keys.sort()
+    if set(keys) <= {"basecn","digest","email","isfinal","keysize","name","typeca","validity"}:
+        ca_param = CAParameter.get()
+        for elt in ca_param:
+            name = elt[0]
+            if not name.startswith("_") and name in data:
+                setattr(ca_param, name, data[name])
+        try:
+            ca_param.validate()
+            ca_param.save()
+            return {'state': 'OK'}, 200
+        except BaseException as error:
+            return {'error': 'CA param not valid', 'exception': error.__repr__()}, 404
+    else:
+        return {'error': 'CA param not valid'}, 404
 
 
 @API.route("/ca/param/", "show ca param", method='GET', defaults={'param': None}, args=[
@@ -111,7 +115,6 @@ def get_caparam(param):
 
     :return: json info about parameters of the ca
     """
-    print(param)
     ca_param = CAParameter.get()
     if param and hasattr(ca_param, param):
         the_return = {param: getattr(ca_param, param)}
@@ -135,7 +138,6 @@ def register_subca(digest, cert):
 @API.route("/ca", None, method='DELETE', level=API.ADMIN)
 @multi_auth.login_required
 def delete_ca():
-    # @TODO create delete ca function
     if SSL.delete_ca():
         return {'ca': 'deleted'}, 200
     else:
