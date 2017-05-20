@@ -86,7 +86,9 @@ class ManpkiTestCase(unittest.TestCase):
         return self.app.open(url,
                              method=method,
                              data=data,
+                             content_type='application/json',
                              headers={
+                                 'Content-type': 'application/json',
                                  'Authorization': 'Basic ' + base64.b64encode(
                                      bytes(username + ":" + password, 'ascii')).decode('ascii')
                              }
@@ -267,6 +269,8 @@ class ManpkiTestCase(unittest.TestCase):
         rv = self.put('/v1.0/ca')
         date_after_create = datetime.utcnow()
         self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], 'ca created')
         ca = rv.data['ca']
         cn = "C=FR, CN=CA, emailAddress=test@manpki.com"
         date_ca_before = datetime.strptime(ca['notbefore'], "%a %b %d %H:%M:%S %Y %Z")
@@ -288,6 +292,24 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(ca_cert.get_extension(1).get_short_name(), b'keyUsage')
         self.assertEqual(ca_cert.get_extension(1).__str__(), "Certificate Sign, CRL Sign")
 
+    def test_ca_create_already_exist_without_force(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['error'], 'CA already exist')
+
+    def test_ca_create_already_exist_with_force(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.put('/v1.0/ca', data='{"force": true}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], 'ca created with force')
+
     def test_show_ca_not_create(self):
         manpki.tools.ssl.SSL.delete_ca()
         rv = self.get('/v1.0/ca')
@@ -307,6 +329,64 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(data_keys,
                          ['algorithm', 'finger_md5', 'finger_sha1', 'id', 'issuer', 'keysize', 'notafter', 'notbefore',
                           'raw', 'serial', 'signature', 'state', 'subject', 'version'])
+
+    def test_set_ca_param_success_one(self):
+        rv = self.post('/v1.0/ca/param', data='{"basecn": "ChangeCN"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['state'], 'OK')
+
+    def test_set_ca_param_success_multiple(self):
+        rv = self.post('/v1.0/ca/param', data='{"basecn": "ChangeCN-2", "keysize": 1024}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['state'], 'OK')
+
+    def test_set_ca_param_not_success(self):
+        rv = self.post('/v1.0/ca/param', data='{"lorem": "ipsum", "keysize": 1024}')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['error'], 'CA param not valid')
+
+    def test_get_ca_param_all(self):
+        rv = self.post('/v1.0/ca/param', data='{"basecn": "C=EU", "keysize": 2047, "email": "test@manpki.co"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.get('/v1.0/ca/param/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 8)
+        keys = list(rv.data.keys())
+        keys.sort()
+        self.assertEqual(keys, ["basecn","digest","email","isfinal","keysize","name","typeca","validity"])
+        self.assertEqual(rv.data['basecn'], "C=EU")
+        self.assertEqual(rv.data['keysize'], 2047)
+        self.assertEqual(rv.data['email'], "test@manpki.co")
+        self.assertEqual(rv.data['validity'], 3560)
+
+    def test_get_ca_param_specified(self):
+        rv = self.post('/v1.0/ca/param', data='{"basecn": "C=NE", "keysize": 2046, "email": "test@manpki.c"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.get('/v1.0/ca/param/basecn')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['basecn'], "C=NE")
+
+
+    # def test_delete_ca_success(self):
+    #     manpki.tools.ssl.SSL.delete_ca()
+    #     rv = self.put('/v1.0/ca')
+    #     self.assertEqual(rv.status_code, 200)
+    #     rv = self.delete('/v1.0/ca')
+    #     print(rv.data)
+    #     self.assertEqual(rv.status_code, 200)
+    #
+    # def test_delete_ca_not_success(self):
+    #     manpki.tools.ssl.SSL.delete_ca()
+    #     rv = self.delete('/v1.0/ca')
+    #     print(rv.data)
+    #     self.assertEqual(rv.status_code, 404)
+
+
+
 
 
 if __name__ == '__main__':
