@@ -3,6 +3,7 @@ import os
 import sys
 import manpki.server
 import unittest
+import OpenSSL
 import json
 import tempfile
 import base64
@@ -10,10 +11,13 @@ import pwd
 from tinydb import TinyDB
 import jose
 import manpki.db
+import manpki.config
 import manpki.tools.api
+import manpki.tools.ssl
 import manpki.api
 from io import StringIO
 from unittest.mock import patch
+from datetime import datetime, timedelta
 import logging
 
 if sys.version_info < (3, 4):
@@ -31,8 +35,8 @@ class Object(object):
     status_code = None
 
 
-def init_db(path):
-    db = TinyDB(path)
+def init_db():
+    db = TinyDB(manpki.config.ManPKIObject.dbdir + "/manpki.json")
     db.purge_tables()
 
     exten = db.table('extension')
@@ -41,35 +45,38 @@ def init_db(path):
         {'type': 'extended', 'oid': '1.3.6.1.5.5.7.3.1', 'name': 'TLS Web Server Authentication', '_default': True})
 
     profile = db.table('profile')
-    profile.insert({'name': 'SSLServer', 'keyusage': '2.5.29.15.3|2.5.29.15.2|2.5.29.15.1', 'extended': '1.3.6.1.5.5.7.3.1',
-                    'ldap': '', '_default': True})
+    profile.insert(
+        {'name': 'SSLServer', 'keyusage': '2.5.29.15.3|2.5.29.15.2|2.5.29.15.1', 'extended': '1.3.6.1.5.5.7.3.1',
+         'ldap': '', '_default': True})
 
     param = db.table('parameter')
     param.insert(
-        {'object': 'ca', 'email': '', 'validity': 3560, 'keysize': 1024, 'basecn': 'C=FR', 'name': 'CA', 'digest': 'sha256',
+        {'object': 'ca', 'email': 'test@manpki.com', 'validity': 3560, 'keysize': 2048, 'basecn': 'C=FR', 'name': 'CA',
+         'digest': 'sha256',
          'typeca': 'rootca', 'isfinal': True})
     param.insert({'object': 'cert', 'validity': 365, 'keysize': 1024, 'digest': 'sha256'})
     param.insert({'object': 'crl', 'enable': False, 'digest': 'md5', 'validity': 30})
     param.insert({'object': 'ocsp', 'enable': False, 'uri': 'http://ocsp/'})
-    param.insert({'object': 'ldap', 'enable': False, 'host': 'ldap://ldap:389/', 'dn': 'cn=admin', 'password': 'password',
-                  'mode': 'ondemand', 'schedule': '5m'})
+    param.insert(
+        {'object': 'ldap', 'enable': False, 'host': 'ldap://ldap:389/', 'dn': 'cn=admin', 'password': 'password',
+         'mode': 'ondemand', 'schedule': '5m'})
 
     param.insert({'object': 'mail', 'enable': False, 'host': 'smtp', 'sender': 'manpki@example.com'})
     param.insert({'object': 'server', 'sslcert': 'cert.pem', 'sslkey': 'key.pem', 'host': 'socket', 'port': 8080})
 
-    db.table('user')
+    user = db.table('user')
+    user.insert({'object': 'user', 'username': pwd.getpwuid(os.getuid())[0], 'roles': [{'role': 'admin'}]})
 
     db.close()
 
 
 class ManpkiTestCase(unittest.TestCase):
-
     def setUp(self):
         self.db_fd = tempfile.NamedTemporaryFile(delete=False)
         self.db_path = self.db_fd.name
         self.db_fd.close()
         manpki.server.app.config['DATABASE'] = self.db_path
-        init_db(self.db_path)
+        init_db()
         self.app = manpki.server.app.test_client()
 
     def tearDown(self):
@@ -80,7 +87,8 @@ class ManpkiTestCase(unittest.TestCase):
                              method=method,
                              data=data,
                              headers={
-                                 'Authorization': 'Basic ' + base64.b64encode(bytes(username + ":" + password, 'ascii')).decode('ascii')
+                                 'Authorization': 'Basic ' + base64.b64encode(
+                                     bytes(username + ":" + password, 'ascii')).decode('ascii')
                              }
                              )
 
@@ -112,7 +120,7 @@ class ManpkiTestCase(unittest.TestCase):
     def post(self, path, data):
         return self._query(path, 'POST', data)
 
-    def put(self, path, data):
+    def put(self, path, data=None):
         return self._query(path, 'PUT', data)
 
     def delete(self, path):
@@ -252,6 +260,54 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.data['lang'], 'fr_FR.UTF-8')
         self.assertNotEqual(rv.data['locales'], None)
         self.assertIsInstance(rv.data['locales'], dict)
+
+    def test_ca_create(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        date_before_create = datetime.utcnow().replace(microsecond=0)
+        rv = self.put('/v1.0/ca')
+        date_after_create = datetime.utcnow()
+        self.assertEqual(rv.status_code, 200)
+        ca = rv.data['ca']
+        cn = "C=FR, CN=CA, emailAddress=test@manpki.com"
+        date_ca_before = datetime.strptime(ca['notbefore'], "%a %b %d %H:%M:%S %Y %Z")
+        date_ca_after = datetime.strptime(ca['notafter'], "%a %b %d %H:%M:%S %Y %Z")
+        self.assertEqual(ca['issuer'], cn)
+        self.assertEqual(ca['subject'], cn)
+        self.assertEqual(ca['keysize'], 2048)
+        self.assertGreaterEqual(date_ca_before, date_before_create)
+        self.assertLessEqual(date_ca_before, date_after_create)
+        self.assertGreaterEqual(date_ca_after, date_before_create + timedelta(days=3560))
+        self.assertLessEqual(date_ca_after, date_after_create + timedelta(days=3560))
+
+        ca_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, ca['raw'])
+        self.assertEqual(ca_cert.get_version(), 2)
+        self.assertTrue(ca_cert.get_extension(0).get_critical())
+        self.assertEqual(ca_cert.get_extension(0).get_short_name(), b'basicConstraints')
+        self.assertEqual(ca_cert.get_extension(0).__str__(), "CA:TRUE, pathlen:0")
+        self.assertTrue(ca_cert.get_extension(1).get_critical())
+        self.assertEqual(ca_cert.get_extension(1).get_short_name(), b'keyUsage')
+        self.assertEqual(ca_cert.get_extension(1).__str__(), "Certificate Sign, CRL Sign")
+
+    def test_show_ca_not_create(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.get('/v1.0/ca')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['error'], 'CA not ready')
+
+    def test_show_ca_create(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.get('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        self.assertGreater(len(rv.data), 1)
+        data_keys = list(rv.data.keys())
+        data_keys.sort()
+        self.assertEqual(data_keys,
+                         ['algorithm', 'finger_md5', 'finger_sha1', 'id', 'issuer', 'keysize', 'notafter', 'notbefore',
+                          'raw', 'serial', 'signature', 'state', 'subject', 'version'])
+
 
 if __name__ == '__main__':
     unittest.main()
