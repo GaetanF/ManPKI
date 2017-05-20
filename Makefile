@@ -27,6 +27,12 @@ run:
 test:
 	./tests/manpki_tests.py
 
+test_with_lib:
+	PYTHONPATH=$(PYTHONPATH) ./tests/manpki_tests.py
+
+env:
+	PYTHONPATH=$(PYTHONPATH) python -c "import manpki.config; manpki.config.setup()"
+
 docs: version
 	$(MAKE) -C ./docs html
 

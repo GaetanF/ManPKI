@@ -128,11 +128,23 @@ def init_directory():
         if not get_var_directory() and not os.path.exists("/var/lib/manpki"):
             os.makedirs("/var/lib/manpki")
             os.makedirs("/var/lib/manpki/cert")
+            os.makedirs("/var/lib/manpki/cert/public")
+            os.makedirs("/var/lib/manpki/cert/public/ca")
+            os.makedirs("/var/lib/manpki/cert/public/certificates")
+            os.makedirs("/var/lib/manpki/cert/private")
+            os.makedirs("/var/lib/manpki/cert/private/ca")
+            os.makedirs("/var/lib/manpki/cert/private/certificates")
             os.makedirs("/var/lib/manpki/db")
         elif get_var_directory():
             path = get_var_directory()
             if not os.path.exists(path+"/cert"):
                 os.makedirs("/var/lib/manpki/cert")
+                os.makedirs("/var/lib/manpki/cert/public")
+                os.makedirs("/var/lib/manpki/cert/public/ca")
+                os.makedirs("/var/lib/manpki/cert/public/certificates")
+                os.makedirs("/var/lib/manpki/cert/private")
+                os.makedirs("/var/lib/manpki/cert/private/ca")
+                os.makedirs("/var/lib/manpki/cert/private/certificates")
             if not os.path.exists(path + "/db"):
                 os.makedirs("/var/lib/manpki/db")
         if not get_run_directory(['/var/run/manpki', '/run/manpki']):
@@ -144,6 +156,12 @@ def init_directory():
             os.makedirs(os.path.expanduser('~/.manpki'))
             os.makedirs(os.path.expanduser('~/.manpki/log'))
             os.makedirs(os.path.expanduser('~/.manpki/cert'))
+            os.makedirs(os.path.expanduser('~/.manpki/cert/public'))
+            os.makedirs(os.path.expanduser('~/.manpki/cert/public/ca'))
+            os.makedirs(os.path.expanduser('~/.manpki/cert/public/certificates'))
+            os.makedirs(os.path.expanduser('~/.manpki/cert/private'))
+            os.makedirs(os.path.expanduser('~/.manpki/cert/private/ca'))
+            os.makedirs(os.path.expanduser('~/.manpki/cert/private/certificates'))
             os.makedirs(os.path.expanduser('~/.manpki/db'))
 
 

@@ -49,15 +49,25 @@ def create_ca():
     """
     if not SSL.check_ca_exist():
         SSL.create_ca()
-        code = 200
-        message = {'ca': 'created'}
+        if SSL.check_ca_exist():
+            code = 200
+            ca = SSL.display_cert(SSL.get_ca())
+            message = {'message': 'ca created', 'ca': ca}
+        else:
+            code = 404
+            message = {'error': 'unable to create the ca'}
     else:
         log.info("CA already exist")
         data = request.get_json(silent=True)
         if data and 'force' in data and data['force']:
             SSL.create_ca(force=data['force'])
-            message = {'ca': 'created force'}
-            code = 200
+            if SSL.check_ca_exist():
+                ca = SSL.display_cert(SSL.get_ca())
+                message = {'message': 'ca created with force', 'ca': ca}
+                code = 200
+            else:
+                code = 404
+                message = {'error': 'unable to create the ca'}
         else:
             code = 404
             message = {'error': 'CA already exist'}
@@ -108,3 +118,25 @@ def get_caparam(param):
     else:
         the_return = ca_param.to_struct()
     return the_return, 200
+
+
+@API.route("/ca/register", None, method='POST', args=[
+    {"name": "digest", "type": "str", "mandatory": True},
+    {"name": "cert", "type": "str", "mandatory": True},
+], level=API.ADMIN)
+@multi_auth.login_required
+def register_subca(digest, cert):
+    log.info(digest)
+    log.info(cert)
+    # @TODO create register subca to parentca function
+    pass
+
+
+@API.route("/ca", None, method='DELETE', level=API.ADMIN)
+@multi_auth.login_required
+def delete_ca():
+    # @TODO create delete ca function
+    if SSL.delete_ca():
+        return {'ca': 'deleted'}, 200
+    else:
+        return {'ca': 'error with deletion'}, 404

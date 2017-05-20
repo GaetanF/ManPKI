@@ -60,8 +60,17 @@ class SSL:
         return hashlib.sha256(cert_content).hexdigest()[:20].upper()
 
     @staticmethod
+    def get_cert_raw(cert):
+        return OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert)
+
+    @staticmethod
     def get_ca():
-        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_ca_path(), "rb").read())
+        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, SSL.get_ca_content())
+
+    @staticmethod
+    def get_ca_content():
+        with open(SSL.get_ca_path(), "rb") as cafile:
+            return cafile.read()
 
     @staticmethod
     def get_ca_privatekey():
@@ -123,8 +132,10 @@ class SSL:
     def delete_cert(certid):
         path_cert = SSL.get_cert_path(certid)
         path_key = SSL.get_cert_privatekey_path(certid)
-        os.unlink(path_key)
-        os.unlink(path_cert)
+        if os.path.isfile(path_cert):
+            os.unlink(path_key)
+        if os.path.isfile(path_key):
+            os.unlink(path_cert)
 
     @staticmethod
     def set_crl(crl):
@@ -138,9 +149,10 @@ class SSL:
     def get_all_certificates():
         list_cert = []
         certdir = ManPKIObject.certdir + "/public/certificates/"
-        for name in os.listdir(certdir):
-            if name.endswith(".crt"):
-                list_cert.append({'id': name[:-4], 'cert': SSL.read_cert(certdir + name)})
+        if os.path.isdir(certdir):
+            for name in os.listdir(certdir):
+                if name.endswith(".crt"):
+                    list_cert.append({'id': name[:-4], 'cert': SSL.read_cert(certdir + name)})
         return list_cert
 
     @staticmethod
@@ -152,6 +164,15 @@ class SSL:
                 certid = name[:-4]
                 list_cert.append(SSL.display_cert(SSL.get_cert(certid)))
         return list_cert
+
+    @staticmethod
+    def delete_ca():
+        for cert in SSL.get_all_certificates():
+            SSL.delete_cert(cert['id'])
+        if os.path.isfile(SSL.get_ca_privatekey_path()):
+            os.unlink(SSL.get_ca_privatekey_path())
+        if os.path.isfile(SSL.get_ca_path()):
+            os.unlink(SSL.get_ca_path())
 
     @staticmethod
     def get_cert(certid):
@@ -204,8 +225,8 @@ class SSL:
         cpts = string.split("/")
         x509name = x509obj
         for elt in cpts:
-            #exec("x509name.%s='%s'" % (elt.split("=")[0].upper(), elt.split("=")[1]))
-            x509name[elt.split("=")[0].upper()] = elt.split("=")[1]
+            exec("x509name.%s='%s'" % (elt.split("=")[0].upper(), elt.split("=")[1]))
+            #x509name[elt.split("=")[0].upper()] = elt.split("=")[1]
         return x509name
 
     @staticmethod
@@ -534,6 +555,7 @@ class SSL:
             jsoncert['algorithm'] = "dsaEncryption"
         else:
             jsoncert['algorithm'] = 'unknown'
+        jsoncert['raw'] = SSL.get_cert_raw(cert).decode('utf-8')
         return jsoncert
 
     @staticmethod
