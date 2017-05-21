@@ -221,7 +221,7 @@ class API:
             log.debug(route)
             app.add_url_rule(
                 rule=route.url,
-                endpoint=route.endpoint.__name__,
+                endpoint=route.package+"."+route.endpoint.__name__,
                 view_func=route.endpoint,
                 methods=[route.method],
                 defaults=route.defaults

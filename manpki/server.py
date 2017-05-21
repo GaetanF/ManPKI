@@ -13,7 +13,7 @@ from manpki.db import ServerParameter
 from manpki.i18n import *
 from manpki.templates import *
 
-import manpki.db
+import manpki.api
 
 load_api_modules()
 
