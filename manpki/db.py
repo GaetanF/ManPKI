@@ -125,8 +125,8 @@ class ExtensionModel(TinyJsonModel):
     _default = fields.BoolField(required=False)
 
     def __init__(self, *args, **kwargs):
-        self._default = False
         super(ExtensionModel, self).__init__(*args, **kwargs)
+        self._default = False
 
     @classmethod
     def get(cls, cond=None, eid=None, cuid=None):
@@ -188,8 +188,8 @@ class Profile(TinyJsonModel):
     _default = fields.BoolField(required=False)
 
     def __init__(self, *args, **kwargs):
-        self._default = False
         super(Profile, self).__init__(*args, **kwargs)
+        self._default = False
 
     def save(self):
         if self._default:
