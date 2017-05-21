@@ -202,7 +202,7 @@ class Profile(TinyJsonModel):
 
     def __repr__(self):
         return {'name': self.name, 'keyusage': self.keyusage,
-                'extended': self.keyusage, 'ldap': self.ldap, 'default': self._default}
+                'extended': self.extended, 'ldap': self.ldap, 'default': self._default}
 
     @property
     def default(self):
