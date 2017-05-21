@@ -14,11 +14,12 @@ multi_auth = MultiAuth(basic_auth, token_auth)
 
 
 def isint(s):
-    return type(s) == int or type(s) == float and s.is_integer() or type(s) == str and all(map(str.isdigit, s))
+    return isinstance(s, int) or isinstance(s, float) and s.is_integer() or isinstance(s, str) and all(
+        map(str.isdigit, s))
 
 
 def isfloat(s):
-    return type(s) == float or type(s) == str and "." in s and isint(s.replace(".", ""))
+    return isinstance(s, float) or isinstance(s, str) and "." in s and isint(s.replace(".", ""))
 
 
 def generate_sha256_string():

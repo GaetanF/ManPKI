@@ -831,7 +831,7 @@ class ManpkiTestCase(unittest.TestCase):
         ret = manpki.tools.reloader._get_args_for_reloading()
         self.assertEqual(len(ret), 2)
         self.assertRegex(ret[0], "python")
-        self.assertEqual(ret[1], "./tests/manpki_tests.py")
+        self.assertEqual(ret[1], "tests/manpki_tests.py")
 
     def test_manpki_tools_reloader_itermodulefile(self):
         for i in manpki.tools.reloader._iter_module_files():

@@ -52,7 +52,7 @@ class SSL:
 
     @staticmethod
     def check_cert_exist(certid):
-        return type(certid) == str and os.path.exists(SSL.get_cert_path(certid))
+        return isinstance(certid, str) and os.path.exists(SSL.get_cert_path(certid))
 
     @staticmethod
     def get_cert_id(cert):
