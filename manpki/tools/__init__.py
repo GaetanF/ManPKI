@@ -52,6 +52,8 @@ def requires_roles(*roles):
 class ManPKIFlaskResponse(Response):
     @classmethod
     def force_type(cls, rv, environ=None):
+        if rv.__class__.__name__ == "RequestRedirect":
+            return super(ManPKIFlaskResponse, cls).force_type(rv, environ)
         if environ['PATH_INFO'] in allowed_paths or 'secretjose' not in session.keys():
             signed = rv
         else:
