@@ -41,6 +41,14 @@ def init_db():
 
     exten = db.table('extension')
     exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.0', 'name': 'digitalSignature', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.1', 'name': 'nonRepudiation', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.2', 'name': 'keyEncipherment', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.3', 'name': 'dataEncipherment', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.4', 'name': 'keyAgreement', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.5', 'name': 'keyCertSign', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.6', 'name': 'cRLSign', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.7', 'name': 'encipherOnly', '_default': True})
+    exten.insert({'type': 'keyusage', 'oid': '2.5.29.15.8', 'name': 'decipherOnly', '_default': True})
     exten.insert(
         {'type': 'extended', 'oid': '1.3.6.1.5.5.7.3.1', 'name': 'TLS Web Server Authentication', '_default': True})
 
@@ -370,7 +378,6 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(len(rv.data), 1)
         self.assertEqual(rv.data['basecn'], "C=NE")
 
-
     # def test_delete_ca_success(self):
     #     manpki.tools.ssl.SSL.delete_ca()
     #     rv = self.put('/v1.0/ca')
@@ -385,9 +392,119 @@ class ManpkiTestCase(unittest.TestCase):
     #     print(rv.data)
     #     self.assertEqual(rv.status_code, 404)
 
+    def test_cert_create(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        ca = rv.data['ca']
+        date_before_create = datetime.utcnow().replace(microsecond=0)
+        rv = self.put('/v1.0/cert', data='{"cn": "TestCert1", "mail": "testcert@manpki.com", "profile":"SSLServer"}')
+        date_after_create = datetime.utcnow()
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 3)
+        self.assertEqual(rv.data['message'], 'certificate created')
+        cert = rv.data['cert']
+        cn = "C=FR, CN=TestCert1, emailAddress=testcert@manpki.com"
+        date_cert_before = datetime.strptime(cert['notbefore'], "%a %b %d %H:%M:%S %Y %Z")
+        date_cert_after = datetime.strptime(cert['notafter'], "%a %b %d %H:%M:%S %Y %Z")
+        self.assertEqual(cert['issuer'], ca['subject'])
+        self.assertEqual(cert['subject'], cn)
+        self.assertEqual(cert['keysize'], 1024)
+        self.assertGreaterEqual(date_cert_before, date_before_create)
+        self.assertLessEqual(date_cert_before, date_after_create)
+        self.assertGreaterEqual(date_cert_after, date_before_create + timedelta(days=365))
+        self.assertLessEqual(date_cert_after, date_after_create + timedelta(days=365))
 
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert['raw'])
+        self.assertEqual(cert.get_version(), 2)
+        self.assertTrue(cert.get_extension(0).get_critical())
+        self.assertEqual(cert.get_extension(0).get_short_name(), b'basicConstraints')
+        self.assertEqual(cert.get_extension(0).__str__(), "CA:FALSE")
+        self.assertTrue(cert.get_extension(1).get_critical())
+        self.assertEqual(cert.get_extension(1).get_short_name(), b'keyUsage')
+        self.assertEqual(cert.get_extension(1).__str__(), "Non Repudiation, Key Encipherment, Data Encipherment")
 
+    # def test_cert_create_already_exist_without_force(self):
+    #     manpki.tools.ssl.SSL.delete_ca()
+    #     rv = self.put('/v1.0/ca')
+    #     self.assertEqual(rv.status_code, 200)
+    #     rv = self.put('/v1.0/ca')
+    #     self.assertEqual(rv.status_code, 404)
+    #     self.assertEqual(len(rv.data), 1)
+    #     self.assertEqual(rv.data['error'], 'CA already exist')
+    #
+    # def test_cert_create_already_exist_with_force(self):
+    #     manpki.tools.ssl.SSL.delete_ca()
+    #     rv = self.put('/v1.0/ca')
+    #     self.assertEqual(rv.status_code, 200)
+    #     rv = self.put('/v1.0/ca', data='{"force": true}')
+    #     self.assertEqual(rv.status_code, 200)
+    #     self.assertEqual(len(rv.data), 2)
+    #     self.assertEqual(rv.data['message'], 'ca created with force')
 
+    def test_show_cert_not_create(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        rv = self.get('/v1.0/cert/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['cert'], [])
+
+    def test_show_cert_one_cert(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.put('/v1.0/cert', data='{"cn": "TestCert2", "mail": "testcert2@manpki.com", "profile":"SSLServer"}')
+        self.assertEqual(rv.status_code, 200)
+        cert = rv.data['cert']
+        rv = self.get('/v1.0/cert/'+cert['id'])
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        data_keys = list(rv.data['cert'].keys())
+        data_keys.sort()
+        self.assertEqual(data_keys,
+                         ['algorithm', 'finger_md5', 'finger_sha1', 'id', 'issuer', 'keysize', 'notafter', 'notbefore',
+                          'raw', 'serial', 'signature', 'state', 'subject', 'version'])
+
+    def test_set_cert_param_success_one(self):
+        rv = self.post('/v1.0/cert/set', data='{"keysize": 1024}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['state'], 'OK')
+
+    def test_set_cert_param_success_multiple(self):
+        rv = self.post('/v1.0/cert/set', data='{"keysize": 1025, "digest": "md5"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['state'], 'OK')
+
+    def test_set_cert_param_not_success(self):
+        rv = self.post('/v1.0/cert/set', data='{"lorem": "ipsum", "keysize": 1026}')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['error'], 'Certificate parameter not valid')
+
+    def test_get_cert_param_all(self):
+        rv = self.post('/v1.0/cert/set', data='{"keysize": 1027, "validity": 30, "digest": "sha1"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.get('/v1.0/cert/param/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 3)
+        keys = list(rv.data.keys())
+        keys.sort()
+        self.assertEqual(keys, ["digest", "keysize", "validity"])
+        self.assertEqual(rv.data['digest'], "sha1")
+        self.assertEqual(rv.data['keysize'], 1027)
+        self.assertEqual(rv.data['validity'], 30)
+
+    def test_get_cert_param_specified(self):
+        rv = self.post('/v1.0/cert/set', data='{"keysize": 1028, "digest": "sha128"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.get('/v1.0/cert/param/keysize')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['keysize'], 1028)
 
 if __name__ == '__main__':
     unittest.main()

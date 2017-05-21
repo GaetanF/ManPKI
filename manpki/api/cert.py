@@ -42,8 +42,9 @@ def show_cert(certid):
 
 
 @API.route("/cert/set", "set cert [param]", method='POST', args=[
-    {"name": "basecn", "type": "str", "mandatory": False},
-    {"name": "email", "type": "email", "mandatory": False}
+    {"name": "validity", "type": "str", "mandatory": False},
+    {"name": "keysize", "type": "email", "mandatory": False},
+    {"name": "digest", "type": "email", "mandatory": False}
 ], level=API.USER, context="cert")
 @multi_auth.login_required
 def set_cert():
@@ -58,17 +59,22 @@ def set_cert():
     """
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
-    cert_param = CertParameter.get()
-    for elt in cert_param:
-        name = elt[0]
-        if not name.startswith("_") and name in data:
-            setattr(cert_param, name, data[name])
-    try:
-        cert_param.validate()
-        cert_param.save()
-        return {'state': 'OK'}, 200
-    except BaseException as error:
-        return {'state': 'NOK', 'exception': error.__repr__()}, 404
+    keys = list(data.keys())
+    keys.sort()
+    if set(keys) <= {"validity", "digest", "keysize"}:
+        cert_param = CertParameter.get()
+        for elt in cert_param:
+            name = elt[0]
+            if not name.startswith("_") and name in data:
+                setattr(cert_param, name, data[name])
+        try:
+            cert_param.validate()
+            cert_param.save()
+            return {'state': 'OK'}, 200
+        except BaseException as error:
+            return {'state': 'NOK', 'exception': error.__repr__()}, 404
+    else:
+        return {'error': 'Certificate parameter not valid'}, 404
 
 
 @API.route("/cert", "create [param=value]", method='PUT', args=[
@@ -91,19 +97,24 @@ def add_cert():
     data = request.get_json(silent=True)
     log.info('Parameter : ' + json.dumps(data))
     try:
-        if data.__class__.__name__ == "list" or not data.keys() >= {'cn', 'mail', 'profile'}:
-            message = {'error': 'missing parameter'}
-            code = 505
+        if not SSL.check_ca_exist():
+            message = {'error': 'ca must be created before create new certificate'}
+            code = 500
         else:
-            try:
-                profile = Profile.get(where('name') == data['profile'])
-                cert_id = SSL.create_cert(profile, data)
-                message = {'message': 'certificate created', 'certid': cert_id}
-                code = 200
-            except Exception as e:
-                message = {'error': 'error during certificate creation', 'message': e.__repr__(),
-                           'profile': data['profile']}
-                code = 404
+            if data.__class__.__name__ == "list" or not data.keys() >= {'cn', 'mail', 'profile'}:
+                message = {'error': 'missing parameter'}
+                code = 505
+            else:
+                try:
+                    profile = Profile.get(where('name') == data['profile'])
+                    cert_id = SSL.create_cert(profile, data)
+                    cert = SSL.display_cert(SSL.get_cert(cert_id))
+                    message = {'message': 'certificate created', 'certid': cert_id, 'cert': cert}
+                    code = 200
+                except Exception as e:
+                    message = {'error': 'error during certificate creation', 'message': e.__repr__(),
+                               'profile': data['profile']}
+                    code = 404
     except Exception as e:
         message = {'error': 'certificate not created', 'message': e.__repr__()}
         code = 500

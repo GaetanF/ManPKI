@@ -75,9 +75,8 @@ class SSL:
     @staticmethod
     def get_ca_privatekey():
         log.info("Load private key : " + SSL.get_ca_privatekey_path())
-        content_privatekey = open(SSL.get_ca_privatekey_path(), "rt").read()
-        privatekey = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, content_privatekey)
-        return privatekey
+        with open(SSL.get_ca_privatekey_path(), "rt") as pkey:
+            return OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, pkey.read())
 
     @staticmethod
     def get_crl():
@@ -92,7 +91,12 @@ class SSL:
 
     @staticmethod
     def read_cert(filename):
-        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, open(filename, "rb").read())
+        return OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, SSL.get_cert_content(filename))
+
+    @staticmethod
+    def get_cert_content(filename):
+        with open(filename, "rb") as certfile:
+            return certfile.read()
 
     @staticmethod
     def get_asn_cert_raw(certid):
@@ -132,9 +136,9 @@ class SSL:
     def delete_cert(certid):
         path_cert = SSL.get_cert_path(certid)
         path_key = SSL.get_cert_privatekey_path(certid)
-        if os.path.isfile(path_cert):
-            os.unlink(path_key)
         if os.path.isfile(path_key):
+            os.unlink(path_key)
+        if os.path.isfile(path_cert):
             os.unlink(path_cert)
 
     @staticmethod
@@ -154,6 +158,11 @@ class SSL:
                 if name.endswith(".crt"):
                     list_cert.append({'id': name[:-4], 'cert': SSL.read_cert(certdir + name)})
         return list_cert
+
+    @staticmethod
+    def delete_all_certs():
+        for cert in SSL.get_all_certificates():
+            SSL.delete_cert(cert['id'])
 
     @staticmethod
     def get_json_all_certificates():
