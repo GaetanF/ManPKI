@@ -19,13 +19,13 @@ def show_profile(profileid):
     :return: information of the profile
     """
     if profileid:
-        profile = Profile.get(where('name') == profileid)
-        if profile:
+        try:
+            profile = Profile.get(where('name') == profileid)
             log.info('Show profile : ' + profileid)
             message = {'profile': profile.__repr__()}
             code = 200
-        else:
-            message = {'error': 'notexist', 'oid': profileid}
+        except ValueError:
+            message = {'error': 'notexist', 'profile': profileid}
             code = 404
     else:
         log.info("Show all profiles")
@@ -52,8 +52,8 @@ def set_profile(profileid):
     :context: profile
     :return: information of the profile
     """
-    profile = Profile.get(where('name') == profileid)
-    if profile:
+    try:
+        profile = Profile.get(where('name') == profileid)
         if not profile.default:
             log.info('Update profile : ' + profileid)
             data = request.get_json()
@@ -72,7 +72,7 @@ def set_profile(profileid):
         else:
             message = {'error': 'defaultprofile', 'profile': profileid}
             code = 404
-    else:
+    except ValueError:
         message = {'error': 'notexist', 'profile': profileid}
         code = 404
 

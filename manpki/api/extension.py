@@ -19,12 +19,12 @@ def show_extension(oid):
     :return: information of the extension
     """
     if oid:
-        log.info('Search oid : ' + oid)
-        extension = ExtensionModel.get(where('oid') == oid)
-        if extension:
+        try:
+            log.info('Search oid : ' + oid)
+            extension = ExtensionModel.get(where('oid') == oid)
             message = {'extension': extension.__repr__()}
             code = 200
-        else:
+        except ValueError:
             message = {'error': 'notexist', 'oid': oid}
             code = 404
     else:
@@ -51,8 +51,8 @@ def set_extension(oid):
     :context: extension
     :return: information of the extension
     """
-    extension = ExtensionModel.get(where('oid') == oid)
-    if extension:
+    try:
+        extension = ExtensionModel.get(where('oid') == oid)
         if not extension.default:
             log.info('Update extension : ' + oid)
             data = request.get_json()
@@ -71,7 +71,7 @@ def set_extension(oid):
         else:
             message = {'error': 'defaultextension', 'oid': oid}
             code = 404
-    else:
+    except ValueError:
         message = {'error': 'notexist', 'oid': oid}
         code = 404
 
