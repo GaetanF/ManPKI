@@ -413,26 +413,28 @@ def envready():
         return False
     return True
 
-if envready():
-    class ManPKIConfig(object):
-        vardir = get_var_directory()
-        certdir = vardir + "/cert"
-        dbdir = vardir + "/db"
 
+class ManPKIConfig(object):
+    vardir = get_var_directory()
+    certdir = vardir + "/cert"
+    dbdir = vardir + "/db"
 
-    if not ConfigObject:
-        ConfigObject = configparser.ConfigParser()
-        configRead = False
-        for f_name in get_config_file():
-            if DEBUG:
-                from manpki.logger import log
-                log.debug("Read configuration file : " + f_name)
-            ConfigObject.read(f_name)
-            configRead = True
-        if not configRead:
-            ConfigObject = None
+if not envready():
+    setup()
 
-    if not ManPKIObject:
-        ManPKIObject = ManPKIConfig()
-        if not ManPKIObject.certdir:
-            ManPKIObject = None
+if not ConfigObject:
+    ConfigObject = configparser.ConfigParser()
+    configRead = False
+    for f_name in get_config_file():
+        if DEBUG:
+            from manpki.logger import log
+            log.debug("Read configuration file : " + f_name)
+        ConfigObject.read(f_name)
+        configRead = True
+    if not configRead:
+        ConfigObject = None
+
+if not ManPKIObject:
+    ManPKIObject = ManPKIConfig()
+    if not ManPKIObject.certdir:
+        ManPKIObject = None
