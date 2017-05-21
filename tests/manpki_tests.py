@@ -425,6 +425,24 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(cert.get_extension(1).get_short_name(), b'keyUsage')
         self.assertEqual(cert.get_extension(1).__str__(), "Non Repudiation, Key Encipherment, Data Encipherment")
 
+    def test_cert_create_without_ca(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/cert', data='{"cn": "TestCert1", "mail": "testcert@manpki.com", "profile":"SSLServer"}')
+        self.assertEqual(rv.status_code, 500)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['error'], 'ca must be created before create new certificate')
+
+    def test_cert_create_not_enough_param(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.put('/v1.0/cert', data='{"cn": "TestCert1"}')
+        self.assertEqual(rv.status_code, 505)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['error'], 'missing parameter')
+
     # def test_cert_create_already_exist_without_force(self):
     #     manpki.tools.ssl.SSL.delete_ca()
     #     rv = self.put('/v1.0/ca')
@@ -449,6 +467,13 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(len(rv.data), 1)
         self.assertEqual(rv.data['cert'], [])
+
+    def test_show_cert_bad_id(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        rv = self.get('/v1.0/cert/0123456789')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['cert'], 'notexist')
 
     def test_show_cert_one_cert(self):
         manpki.tools.ssl.SSL.delete_all_certs()
@@ -505,6 +530,59 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(len(rv.data), 1)
         self.assertEqual(rv.data['keysize'], 1028)
+
+    def test_new_profile_already_exist(self):
+        rv = self.put('/v1.0/profile/SSLServer')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "alreadyexist")
+        self.assertEqual(rv.data['profile'], "SSLServer")
+
+    def test_new_profile(self):
+        rv = self.put('/v1.0/profile/SSLTest', data='{"keyusage": "2.5.29.15.4"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], "ok")
+        self.assertEqual(rv.data['profile'], "SSLTest")
+
+    def test_set_profile_default(self):
+        rv = self.post('/v1.0/profile/SSLServer', data='{"keyusage": "2.5.29.15.4"}')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "defaultprofile")
+        self.assertEqual(rv.data['profile'], "SSLServer")
+
+    def test_set_profile(self):
+        rv = self.put('/v1.0/profile/SSLTest', data='{"keyusage": "2.5.29.15.4"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.post('/v1.0/profile/SSLTest', data='{"extended": "1.3.6.1.5.5.7.3.1"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], "updated")
+        self.assertEqual(rv.data['profile'], "SSLTest")
+
+    def test_delete_profile_exist(self):
+        rv = self.put('/v1.0/profile/SSLTest', data='{"keyusage": "2.5.29.15.4"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.delete('/v1.0/profile/SSLTest')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], "deleted")
+        self.assertEqual(rv.data['profile'], "SSLTest")
+
+    def test_delete_profile_not_exist(self):
+        rv = self.delete('/v1.0/profile/SSLNotExist')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 3)
+        self.assertEqual(rv.data['error'], "notexist")
+        self.assertEqual(rv.data['profile'], "SSLNotExist")
+
+    def test_delete_profile_default(self):
+        rv = self.delete('/v1.0/profile/SSLServer')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "defaultprofile")
+        self.assertEqual(rv.data['profile'], "SSLServer")
 
 if __name__ == '__main__':
     unittest.main()

@@ -54,19 +54,23 @@ def set_profile(profileid):
     """
     profile = Profile.get(where('name') == profileid)
     if profile:
-        log.info('Update profile : ' + profileid)
-        data = request.json
-        for elt in profile:
-            name = elt[0]
-            if not name.startswith("_") and name in data:
-                setattr(profile, name, data[name])
-        try:
-            profile.validate()
-            profile.save()
-            message = {'profile': profileid, 'message': 'created'}
-            code = 200
-        except BaseException as error:
-            message = {'error': 'cannotcreate', 'profile': profileid, 'exception': error.__repr__()}
+        if not profile.default:
+            log.info('Update profile : ' + profileid)
+            data = request.get_json()
+            for elt in profile:
+                name = elt[0]
+                if not name.startswith("_") and name in data:
+                    setattr(profile, name, data[name])
+            try:
+                profile.validate()
+                profile.save()
+                message = {'profile': profileid, 'message': 'updated'}
+                code = 200
+            except BaseException as error:
+                message = {'error': 'cannotupdate', 'profile': profileid, 'exception': error.__repr__()}
+                code = 404
+        else:
+            message = {'error': 'defaultprofile', 'profile': profileid}
             code = 404
     else:
         message = {'error': 'notexist', 'profile': profileid}
@@ -95,8 +99,8 @@ def add_profile(profileid):
         code = 404
     except BaseException:
         profile = Profile()
-        log.info('Parameter : ' + json.dumps(request.json))
-        data = request.json
+        log.info('Parameter : ' + json.dumps(request.get_json()))
+        data = request.get_json()
         for elt in profile:
             name = elt[0]
             if not name.startswith("_") and name in data:
@@ -115,7 +119,7 @@ def add_profile(profileid):
     return message, code
 
 
-@API.route("/profile/<oid>", "delete profile [param]", method='DELETE', context="profile", args=[
+@API.route("/profile/<profileid>", "delete profile [param]", method='DELETE', context="profile", args=[
     {"name": "profileid", "type": "str", "mandatory": False}], level=API.USER)
 @multi_auth.login_required
 def delete_profile(profileid):
@@ -132,7 +136,7 @@ def delete_profile(profileid):
         profile = Profile.get(where('name') == profileid)
         if not profile.default:
             profile.delete()
-            message = {'message': 'ok', 'profile': profileid}
+            message = {'message': 'deleted', 'profile': profileid}
             code = 200
         else:
             message = {'error': 'defaultprofile', 'profile': profileid}
