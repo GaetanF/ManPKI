@@ -413,14 +413,14 @@ def envready():
         return False
     return True
 
+if not envready():
+    setup()
+
 
 class ManPKIConfig(object):
     vardir = get_var_directory()
     certdir = vardir + "/cert"
     dbdir = vardir + "/db"
-
-if not envready():
-    setup()
 
 if not ConfigObject:
     ConfigObject = configparser.ConfigParser()
