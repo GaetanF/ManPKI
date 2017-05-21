@@ -552,6 +552,13 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.data['error'], "defaultprofile")
         self.assertEqual(rv.data['profile'], "SSLServer")
 
+    def test_set_profile_not_exist(self):
+        rv = self.post('/v1.0/profile/SSLNotExist', data='{"keyusage": "2.5.29.15.4"}')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "notexist")
+        self.assertEqual(rv.data['profile'], "SSLNotExist")
+
     def test_set_profile(self):
         rv = self.put('/v1.0/profile/SSLTest', data='{"keyusage": "2.5.29.15.4"}')
         self.assertEqual(rv.status_code, 200)
@@ -583,6 +590,29 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(len(rv.data), 2)
         self.assertEqual(rv.data['error'], "defaultprofile")
         self.assertEqual(rv.data['profile'], "SSLServer")
+
+    def test_show_profile_default(self):
+        rv = self.get('/v1.0/profile/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['profile'], [
+            {"default": True, "ldap": "", "name": "SSLServer", "keyusage": "2.5.29.15.3|2.5.29.15.2|2.5.29.15.1",
+             "extended": "1.3.6.1.5.5.7.3.1"}])
+
+    def test_show_profile_one_exist_profile(self):
+        rv = self.get('/v1.0/profile/SSLServer')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['profile'],
+            {"default": True, "ldap": "", "name": "SSLServer", "keyusage": "2.5.29.15.3|2.5.29.15.2|2.5.29.15.1",
+             "extended": "1.3.6.1.5.5.7.3.1"})
+
+    def test_show_profile_not_exist_profile(self):
+        rv = self.get('/v1.0/profile/SSLTest')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['profile'], "SSLTest")
+        self.assertEqual(rv.data['error'], "notexist")
 
     def test_new_extension_already_exist(self):
         rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.1')
@@ -619,7 +649,7 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.data['error'], "defaultextension")
         self.assertEqual(rv.data['oid'], "2.5.29.15.0")
 
-    def test_set_extension(self):
+    def test_set_extension_correct(self):
         rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"name": "Code Signing", "type": "extended"}')
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(len(rv.data), 2)
@@ -628,6 +658,13 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(len(rv.data), 2)
         self.assertEqual(rv.data['message'], "updated")
         self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.3")
+
+    def test_set_extension_not_exist(self):
+        rv = self.post('/v1.0/extension/1.3.6.1.5.5.7.3.4', data='{"name": "Test of John Doe", "type": "keyusage"}')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "notexist")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.4")
 
     def test_delete_extension_exist(self):
         rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"name": "Code Signing", "type": "extended"}')
@@ -651,6 +688,30 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(len(rv.data), 2)
         self.assertEqual(rv.data['error'], "defaultextension")
         self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.1")
+
+    def test_show_extension_default(self):
+        rv = self.get('/v1.0/extension/')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(len(rv.data['extension']), 10)
+        keys = list(rv.data['extension'][0].keys())
+        keys.sort()
+        self.assertEqual(keys, ["default", "name", "oid", "type"])
+
+    def test_show_extension_one_exist_extension(self):
+        rv = self.get('/v1.0/extension/2.5.29.15.1')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['extension'],
+            {'type': 'keyusage', 'oid': '2.5.29.15.1', 'name': 'nonRepudiation', 'default': True})
+
+    def test_show_extension_not_exist_profile(self):
+        rv = self.get('/v1.0/extension/1.2.3.4.5.6.7.8.9')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['oid'], "1.2.3.4.5.6.7.8.9")
+        self.assertEqual(rv.data['error'], "notexist")
+
 
 if __name__ == '__main__':
     unittest.main()
