@@ -81,6 +81,9 @@ version = '0.1'
 # The full version, including alpha/beta/rc tags.
 release = '0.1.0'
 
+import manpki.config
+manpki.config.setup()
+
 try:
     from manpki import __version__
     # The short X.Y version.
