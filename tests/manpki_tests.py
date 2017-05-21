@@ -584,5 +584,73 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.data['error'], "defaultprofile")
         self.assertEqual(rv.data['profile'], "SSLServer")
 
+    def test_new_extension_already_exist(self):
+        rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.1')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "alreadyexist")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.1")
+
+    def test_new_extension_with_correct_param(self):
+        rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"name": "Code Signing", "type":"extended"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], "ok")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.3")
+
+    def test_new_extension_with_incorrect_type(self):
+        rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"name": "Code Signing", "type":"toto"}')
+        self.assertEqual(rv.status_code, 500)
+        self.assertEqual(len(rv.data), 3)
+        self.assertEqual(rv.data['error'], "missingtypeorname")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.3")
+
+    def test_new_extension_with_missing_param(self):
+        rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"type":"toto"}')
+        self.assertEqual(rv.status_code, 500)
+        self.assertEqual(len(rv.data), 3)
+        self.assertEqual(rv.data['error'], "missingtypeorname")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.3")
+
+    def test_set_extension_default(self):
+        rv = self.post('/v1.0/extension/2.5.29.15.0', data='{"type": "keyusage", "name": "Digital Sign"}')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "defaultextension")
+        self.assertEqual(rv.data['oid'], "2.5.29.15.0")
+
+    def test_set_extension(self):
+        rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"name": "Code Signing", "type": "extended"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        rv = self.post('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"name": "Sign of Code", "type": "keyusage"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], "updated")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.3")
+
+    def test_delete_extension_exist(self):
+        rv = self.put('/v1.0/extension/1.3.6.1.5.5.7.3.3', data='{"name": "Code Signing", "type": "extended"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.delete('/v1.0/extension/1.3.6.1.5.5.7.3.3')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['message'], "deleted")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.3")
+
+    def test_delete_extension_not_exist(self):
+        rv = self.delete('/v1.0/extension/1.2.3.4.5.6.7.8.9')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 3)
+        self.assertEqual(rv.data['error'], "notexist")
+        self.assertEqual(rv.data['oid'], "1.2.3.4.5.6.7.8.9")
+
+    def test_delete_extension_default(self):
+        rv = self.delete('/v1.0/extension/1.3.6.1.5.5.7.3.1')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 2)
+        self.assertEqual(rv.data['error'], "defaultextension")
+        self.assertEqual(rv.data['oid'], "1.3.6.1.5.5.7.3.1")
+
 if __name__ == '__main__':
     unittest.main()

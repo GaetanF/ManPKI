@@ -53,19 +53,23 @@ def set_extension(oid):
     """
     extension = ExtensionModel.get(where('oid') == oid)
     if extension:
-        log.info('Update extension : ' + oid)
-        data = request.json
-        for elt in extension:
-            name = elt[0]
-            if not name.startswith("_") and name in data:
-                setattr(extension, name, data[name])
-        try:
-            extension.validate()
-            extension.save()
-            message = {'oid': oid, 'message': 'updated'}
-            code = 200
-        except BaseException as error:
-            message = {'error': 'cannotupdate', 'oid': oid, 'exception': error.__repr__()}
+        if not extension.default:
+            log.info('Update extension : ' + oid)
+            data = request.get_json()
+            for elt in extension:
+                name = elt[0]
+                if not name.startswith("_") and name in data:
+                    setattr(extension, name, data[name])
+            try:
+                extension.validate()
+                extension.save()
+                message = {'oid': oid, 'message': 'updated'}
+                code = 200
+            except BaseException as error:
+                message = {'error': 'cannotupdate', 'oid': oid, 'exception': error.__repr__()}
+                code = 404
+        else:
+            message = {'error': 'defaultextension', 'oid': oid}
             code = 404
     else:
         message = {'error': 'notexist', 'oid': oid}
@@ -95,7 +99,7 @@ def add_extension(oid):
     except BaseException as error:
         data = request.get_json(silent=True)
         log.info('Parameter : ' + json.dumps(data))
-        if 'type' in data and data['type'] in ('extended', 'keyusage'):
+        if 'type' in data and 'name' in data and data['type'] in ('extended', 'keyusage'):
             extension = ExtensionModel()
             for elt in extension:
                 name = elt[0]
@@ -113,7 +117,7 @@ def add_extension(oid):
                 message = {'error': 'unable to add new extension', 'message': e.__repr__(), 'oid': oid}
                 code = 404
         else:
-            message = {'error': 'invalidtype', 'oid': oid, 'exception': error.__repr__()}
+            message = {'error': 'missingtypeorname', 'oid': oid, 'exception': error.__repr__()}
             code = 500
 
     return message, code
@@ -136,7 +140,7 @@ def delete_extension(oid):
         extension = ExtensionModel.get(where('oid') == oid)
         if not extension.default:
             extension.delete()
-            message = {'message': 'ok', 'oid': oid}
+            message = {'message': 'deleted', 'oid': oid}
             code = 200
         else:
             message = {'error': 'defaultextension', 'oid': oid}
