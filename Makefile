@@ -32,6 +32,7 @@ test_with_lib:
 
 env:
 	PYTHONPATH=$(PYTHONPATH) python -c "import manpki.config; manpki.config.setup()"
+	PYTHONPATH=$(PYTHONPATH) python tools/manageUser.py -a -u $(USER) -g admin
 
 docs: version
 	$(MAKE) -C ./docs html
