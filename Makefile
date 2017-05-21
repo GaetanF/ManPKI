@@ -25,17 +25,17 @@ run:
 	PYTHONPATH=$(PYTHONPATH) ./bin/manpkid 
 
 test:
-	./tests/manpki_tests.py
+	tests/manpki_tests.py
 
 test_with_lib:
-	PYTHONPATH=$(PYTHONPATH) ./tests/manpki_tests.py
+	PYTHONPATH=$(PYTHONPATH) tests/manpki_tests.py
 
 env:
 	PYTHONPATH=$(PYTHONPATH) python -c "import manpki.config; manpki.config.setup()"
 	PYTHONPATH=$(PYTHONPATH) python tools/manageUser.py -a -u $(USER) -g admin
 
 docs: version
-	$(MAKE) -C ./docs html
+	PYTHONPATH=$(PYTHONPATH) $(MAKE) -C ./docs html
 
 sdist: version
 	./setup.py sdist
@@ -45,6 +45,9 @@ bdist: version
 
 install: version
 	./setup.py install --root $(DESTDIR)
+
+deps: version
+	pip install -r requirements.txt
 
 develop: version
 	USE_SETUPTOOLS=1 ./setup.py develop
