@@ -1,4 +1,4 @@
-from flask import Response, jsonify
+from flask import Response, jsonify, g
 from jose import jws
 from functools import wraps
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth, MultiAuth
@@ -14,11 +14,11 @@ multi_auth = MultiAuth(basic_auth, token_auth)
 
 
 def isint(s):
-    return all(map(str.isdigit, s))
+    return type(s) == int or type(s) == float and s.is_integer() or type(s) == str and all(map(str.isdigit, s))
 
 
 def isfloat(s):
-    return "." in s and isint(s.replace(".", ""))
+    return type(s) == float or type(s) == str and "." in s and isint(s.replace(".", ""))
 
 
 def generate_sha256_string():
@@ -31,7 +31,7 @@ def error_response():
 
 def get_current_user_role():
     if 'username' in session:
-        return session['username'].get_roles()
+        return g.user.get_roles()
     else:
         return 'anonymous'
 

@@ -52,7 +52,7 @@ class SSL:
 
     @staticmethod
     def check_cert_exist(certid):
-        return os.path.exists(SSL.get_cert_path(certid))
+        return type(certid) == str and os.path.exists(SSL.get_cert_path(certid))
 
     @staticmethod
     def get_cert_id(cert):
@@ -235,7 +235,6 @@ class SSL:
         x509name = x509obj
         for elt in cpts:
             exec("x509name.%s='%s'" % (elt.split("=")[0].upper(), elt.split("=")[1]))
-            #x509name[elt.split("=")[0].upper()] = elt.split("=")[1]
         return x509name
 
     @staticmethod
@@ -611,7 +610,7 @@ class WebSSL:
         pkey = crypto.PKey()
         pkey.generate_key(crypto.TYPE_RSA, 2048)
         cert.set_pubkey(pkey)
-        cert.sign(pkey, b'sha256')
+        cert.sign(pkey, 'sha256')
 
         return cert, pkey
 
