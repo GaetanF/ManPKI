@@ -1,3 +1,5 @@
+API
+===
 
 Definition
 ^^^^^^^^^^
@@ -24,13 +26,33 @@ API method accessible are describre bellow.
 +---------------------+-------------------------------------------------+
 | ``/v1.0/server``    | API Server management                           |
 +---------------------+-------------------------------------------------+
+| ``/ping``           | Ping/Pong daemon                                |
++---------------------+-------------------------------------------------+
+| ``/discovery``      | Discover all available method for current user  |
++---------------------+-------------------------------------------------+
+| ``/info``           | Get some information of current session         |
++---------------------+-------------------------------------------------+
+| ``/login``          | Log in the application                          |
++---------------------+-------------------------------------------------+
+| ``/logout``         | Disconnect the user                             |
++---------------------+-------------------------------------------------+
+| ``/locale/<lang>``  | Get all locale for the specified language       |
++---------------------+-------------------------------------------------+
+| ``/render``         | Get render system for the CLI                   |
++---------------------+-------------------------------------------------+
+
+Global
+^^^^^^
+
+.. qrefflask:: manpki.server:app
+   :undoc-static:
 
 
 CA
 ^^
 
 .. autoflask:: manpki.server:app
-   :modules: manpki.api.ca 
+   :modules: manpki.api.ca
 
 Cert
 ^^^^
@@ -38,17 +60,17 @@ Cert
 .. autoflask:: manpki.server:app
    :modules: manpki.api.cert
 
-Extension
-^^^^^^^^^
-
-.. autoflask:: manpki.server:app
-   :modules: manpki.api.extension
-
 Profile
 ^^^^^^^
 
 .. autoflask:: manpki.server:app
    :modules: manpki.api.profile
+
+Extension
+^^^^^^^^^
+
+.. autoflask:: manpki.server:app
+   :modules: manpki.api.extension
 
 Server
 ^^^^^^
