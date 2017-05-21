@@ -126,7 +126,8 @@ class ExtensionModel(TinyJsonModel):
 
     def __init__(self, *args, **kwargs):
         super(ExtensionModel, self).__init__(*args, **kwargs)
-        self._default = False
+        if not self._default:
+            self._default = False
 
     @classmethod
     def get(cls, cond=None, eid=None, cuid=None):
@@ -189,7 +190,8 @@ class Profile(TinyJsonModel):
 
     def __init__(self, *args, **kwargs):
         super(Profile, self).__init__(*args, **kwargs)
-        self._default = False
+        if not self._default:
+            self._default = False
 
     def save(self):
         if self._default:
