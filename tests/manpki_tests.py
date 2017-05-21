@@ -712,6 +712,42 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.data['oid'], "1.2.3.4.5.6.7.8.9")
         self.assertEqual(rv.data['error'], "notexist")
 
+    def test_show_server(self):
+        rv = self.get('/v1.0/server')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['server'], {"host": "socket", "cert": "", "port": "0", "key": ""})
+
+    def test_restart_server(self):
+        rv = self.get('/v1.0/server/restart')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['message'], "reload in 5 second")
+
+    def test_set_server_with_socket(self):
+        rv = self.post('/v1.0/server/set', data='{"host": "socket"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['message'], "ok")
+
+    def test_set_server_with_host_ip(self):
+        rv = self.post('/v1.0/server/set', data='{"host": "0.0.0.0"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['message'], "ok")
+
+    def test_set_server_with_cert(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.put('/v1.0/cert', data='{"cn": "TestCert2", "mail": "testcert2@manpki.com", "profile":"SSLServer"}')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.post('/v1.0/server/set', data='{"host": "0.0.0.0", "port": "4443", "cert": "'+rv.data['certid']+'"}')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['message'], "ok")
+
 
 if __name__ == '__main__':
     unittest.main()
