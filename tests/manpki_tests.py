@@ -821,11 +821,23 @@ class ManpkiTestCase(unittest.TestCase):
         ret = manpki.tools.WebSSL._get_openssl_crypto_module()
         self.assertEqual(type(ret), type(sys))
 
-    def test_manpki_tools_webssl_adhoc(self):
+    def test_manpki_tools_webssl_adhocpair(self):
         webssl = manpki.tools.WebSSL()
         cert, pkey = webssl.generate_adhoc_ssl_pair(cn="Test")
         self.assertIsInstance(cert, OpenSSL.crypto.X509)
         self.assertIsInstance(pkey, OpenSSL.crypto.PKey)
+
+    def test_manpki_tools_webssl_adhocpair_wildcard(self):
+        webssl = manpki.tools.WebSSL()
+        cert, pkey = webssl.generate_adhoc_ssl_pair()
+        self.assertIsInstance(cert, OpenSSL.crypto.X509)
+        self.assertIsInstance(pkey, OpenSSL.crypto.PKey)
+
+    def test_manpki_tools_webssl_adhoc_context(self):
+        webssl = manpki.tools.WebSSL()
+        cert, pkey = webssl.generate_adhoc_ssl_context()
+        self.assertTrue(os.path.isfile(cert))
+        self.assertTrue(os.path.isfile(pkey))
 
     def test_manpki_tools_reloader_getargs(self):
         ret = manpki.tools.reloader._get_args_for_reloading()
