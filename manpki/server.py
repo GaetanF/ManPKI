@@ -4,7 +4,7 @@ from gevent.pywsgi import WSGIServer
 from flask import Flask, g
 
 from gevent import socket
-import ssl
+from ssl import PROTOCOL_SSLv23
 import pwd
 
 from manpki.config import WEB_SECRET, envready, get_run_directory
@@ -174,7 +174,7 @@ def start():
             ssl_ctxt = {
                 'certfile': cert_file,
                 'keyfile': pkey_file,
-                'ssl_version': ssl.PROTOCOL_SSLv23,
+                'ssl_version': PROTOCOL_SSLv23
             }
         log.info("Start server on {}:{}".format(host, port))
         wsgi_server = WSGIServer(listener, app, **ssl_ctxt)

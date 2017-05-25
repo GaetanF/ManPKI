@@ -25,7 +25,7 @@ def show_ca():
     :return: ca information
     """
     if SSL.check_ca_exist():
-        ca = SSL.display_cert(SSL.get_ca())
+        ca = {'ca': SSL.display_cert(SSL.get_ca())}
         return ca, 200
     else:
         ca = {'error': 'CA not ready'}
@@ -76,7 +76,7 @@ def create_ca():
 
 @API.route("/ca/param", "set", method='POST', level=API.ADMIN, context="ca", args=[
     {"name": "basecn", "type": "str", "mandatory": False},
-    {"name": "email", "type": "email", "mandatory": False},
+    {"name": "email", "type": "str", "mandatory": False},
     {"name": "keysize", "type": "int", "mandatory": False}
 ])
 @multi_auth.login_required

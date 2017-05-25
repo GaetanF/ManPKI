@@ -68,7 +68,8 @@ class APIRoute:
         "endpoint": "function",
         "context": "str",
         "args": "list",
-        "defaults": "dict"
+        "defaults": "dict",
+        "render": "str"
     }
 
     def __init__(self, url='', command='', endpoint=None, **options):
@@ -83,6 +84,7 @@ class APIRoute:
         self.context = options.pop("context", None)
         self.args = options.pop("args", None)
         self.defaults = options.pop("defaults", None)
+        self.render = options.pop("render", None)
 
     def build_from_api(self, apiDict):
         self.endpoint = apiDict['endpoint']
@@ -94,6 +96,7 @@ class APIRoute:
         self.context = apiDict['context']
         self.args = apiDict['args']
         self.defaults = apiDict['defaults']
+        self.render = apiDict['render']
 
     def get_endpoint(self):
         return "%s.%s" % (self.package, self.method.__name__)
@@ -120,7 +123,7 @@ class APIRoute:
                         defaults.update({args.name: routedict['defaults'][args.name]})
             del tmpdict['defaults']
         theroute = None
-        if len(tmpdict.keys()) == 7:
+        if len(tmpdict.keys()) == 8:
             theroute = APIRoute(url=tmpdict['url'],
                                 method=tmpdict['method'],
                                 command=tmpdict['command'],
@@ -128,6 +131,7 @@ class APIRoute:
                                 level=tmpdict['level'],
                                 context=tmpdict['context'],
                                 args=tmpdict['args'],
+                                render=tmpdict['render'],
                                 defaults=defaults)
         return theroute
 
@@ -145,7 +149,7 @@ class APIRoute:
         elif self.level == 255:
             leveler = "ADMIN"
 
-        mask = "<APIRoute endpoint: {}, package: {}, command: {}, context: {}, level: {}, defaults: {}, args: {}>"
+        mask = "<APIRoute endpoint: {}, package: {}, command: {}, context: {}, level: {}, defaults: {}, args: {}, render: {}>"
         return mask.format(
             self.endpoint.__name__,
             self.package,
@@ -153,7 +157,8 @@ class APIRoute:
             self.context,
             leveler,
             self.defaults,
-            self.args
+            self.args,
+            self.render
         )
 
     def json(self):
@@ -168,7 +173,8 @@ class APIRoute:
             # "level": self.level,
             "endpoint": self.package + "." + self.endpoint.__name__,
             "context": self.context,
-            "args": args
+            "args": args,
+            "render": self.render
         }
 
     def is_authorized(self):
@@ -195,7 +201,7 @@ class API:
     groups = {'admin': ADMIN, 'ca': CA, 'ra': RA, 'user': USER, 'anonymous': 0}
 
     @staticmethod
-    def route(url, command, method='GET', level=USER, defaults=None, context=None, args=None):
+    def route(url, command, method='GET', level=USER, defaults=None, context=None, args=None, render=None):
         def decorator(f):
             if url and command:
                 api_dict = {
@@ -206,7 +212,8 @@ class API:
                     "level": level,
                     "endpoint": f,
                     "context": context,
-                    "args": args
+                    "args": args,
+                    "render": render
                 }
                 if APIRoute.is_valid_route(api_dict):
                     route = APIRoute.build_valid_route(api_dict)
@@ -231,3 +238,10 @@ class API:
     def add_route(route):
         if isinstance(route, APIRoute):
             API.routes.append(route)
+
+    @staticmethod
+    def get_route_from_request(request):
+        for route in API.routes:
+            if request.url_rule.rule == route.url and request.endpoint == route.package+"."+route.endpoint.__name__:
+                return route
+        return None

@@ -18,7 +18,7 @@ from manpki.db import CertParameter, Profile
 @API.route("/cert/", "show cert", method='GET', defaults={'certid': None}, args=[
     {"name": "certid", "type": "str", "mandatory": False}], level=API.USER)
 @API.route("/cert/<certid>", "show cert [param]", method='GET', args=[
-    {"name": "certid", "type": "str", "mandatory": False}], level=API.USER)
+    {"name": "certid", "type": "str", "mandatory": False}], render="manpki.api.cert.show_cert_withid", level=API.USER)
 @multi_auth.login_required
 def show_cert(certid):
     """Show all cert or specific cert information

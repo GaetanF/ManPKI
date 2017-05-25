@@ -333,8 +333,9 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.status_code, 200)
         rv = self.get('/v1.0/ca')
         self.assertEqual(rv.status_code, 200)
-        self.assertGreater(len(rv.data), 1)
-        data_keys = list(rv.data.keys())
+        self.assertEqual(len(rv.data), 1)
+        self.assertGreater(len(rv.data['ca']), 1)
+        data_keys = list(rv.data['ca'].keys())
         data_keys.sort()
         self.assertEqual(data_keys,
                          ['algorithm', 'finger_md5', 'finger_sha1', 'id', 'issuer', 'keysize', 'notafter', 'notbefore',

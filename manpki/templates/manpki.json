@@ -1,3 +1,5 @@
 {
-  "render_manpki.api.cert.show_cert": "{cert:table:id|subject|notbefore|notafter|state}"
+  "render_manpki.api.ca.show_ca": "{ca:list:id|subject|issuer|serial|notbefore|notafter|keysize|version|signature|finger_md5|finger_sha1|algorithm|state|raw}",
+  "render_manpki.api.cert.show_cert": "{cert:table:id|subject|notbefore|notafter|state}",
+  "render_manpki.api.cert.show_cert_withid": "{cert:list:id|subject|issuer|serial|notbefore|notafter|keysize|version|signature|finger_md5|finger_sha1|algorithm|state|raw}"
 }
