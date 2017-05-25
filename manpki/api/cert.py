@@ -126,6 +126,7 @@ def add_cert():
     {"name": "param", "type": "str", "mandatory": False}], level=API.USER)
 @API.route("/cert/param/<param>", "show cert param [param]", method='GET', args=[
     {"name": "param", "type": "str", "mandatory": False}], level=API.USER)
+@multi_auth.login_required
 def get_cert_param(param):
     """Get certificate parameter
 

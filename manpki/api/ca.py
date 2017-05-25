@@ -76,8 +76,14 @@ def create_ca():
 
 @API.route("/ca/param", "set", method='POST', level=API.ADMIN, context="ca", args=[
     {"name": "basecn", "type": "str", "mandatory": False},
-    {"name": "email", "type": "str", "mandatory": False},
-    {"name": "keysize", "type": "int", "mandatory": False}
+    {"name": "email", "type": "Mail", "mandatory": False},
+    {"name": "keysize", "type": "int", "mandatory": False},
+    {"name": "digest", "type": "str", "mandatory": False},
+    {"name": "isfinal", "type": "bool", "mandatory": False},
+    {"name": "name", "type": "str", "mandatory": False},
+    {"name": "typeca", "type": "str", "mandatory": False},
+    {"name": "validity", "type": "int", "mandatory": False},
+
 ])
 @multi_auth.login_required
 def set_ca():
@@ -89,7 +95,7 @@ def set_ca():
     log.info('Parameter : ' + json.dumps(data))
     keys = list(data.keys())
     keys.sort()
-    if set(keys) <= {"basecn","digest","email","isfinal","keysize","name","typeca","validity"}:
+    if set(keys) <= {"basecn", "digest", "email", "isfinal", "keysize", "name", "typeca", "validity"}:
         ca_param = CAParameter.get()
         for elt in ca_param:
             name = elt[0]
