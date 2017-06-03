@@ -818,6 +818,39 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertIsNone(manpki.tools.ssl.SSL.get_cert(0))
         self.assertIsNone(manpki.tools.ssl.SSL.get_cert(None))
 
+    def test_manpki_tools_ssl_generate_crl(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        self.assertTrue(manpki.tools.ssl.SSL.generate_crl())
+
+    def test_manpki_tools_ssl_generate_key(self):
+        key = manpki.tools.ssl.SSL.create_key(1001)
+        self.assertIsInstance(key, OpenSSL.crypto.PKey)
+        self.assertEqual(key.bits(), 1001)
+        self.assertEqual(key.type(), OpenSSL.crypto.TYPE_RSA)
+        self.assertTrue(key.check())
+
+    def test_manpki_tools_ssl_decode_time(self):
+        strtime = "20170603120102Z"
+        thedate = manpki.tools.ssl.SSL.decode_time(strtime.encode())
+        self.assertIsInstance(thedate, datetime)
+        self.assertEqual(thedate.year, 2017)
+        self.assertEqual(thedate.month, 6)
+        self.assertEqual(thedate.day, 3)
+        self.assertEqual(thedate.hour, 12)
+        self.assertEqual(thedate.minute, 1)
+        self.assertEqual(thedate.second, 2)
+        self.assertEqual(thedate.tzname(), 'UTC')
+
+    def test_manpki_tools_ssl_create_request(self):
+        key = manpki.tools.ssl.SSL.create_key(1002)
+        req = manpki.tools.ssl.SSL.create_request(key)
+        self.assertIsInstance(req, OpenSSL.crypto.X509Req)
+        self.assertIsInstance(req.get_pubkey(), OpenSSL.crypto.PKey)
+        self.assertEqual(req.get_pubkey().bits(), 1002)
+
     def test_manpki_tools_webssl_module(self):
         ret = manpki.tools.WebSSL._get_openssl_crypto_module()
         self.assertEqual(type(ret), type(sys))

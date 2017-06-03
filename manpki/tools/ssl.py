@@ -80,12 +80,14 @@ class SSL:
 
     @staticmethod
     def get_crl():
-        return OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_crl_path(), "rt").read())
+        with open(SSL.get_crl_path(), "rt") as crl:
+            return OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, crl.read())
 
     @staticmethod
     def get_crl_binary():
+        crlparam = CrlParameter.get()
         crl = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_crl_path(), "rt").read())
-        days = ConfigObject.getint("crl", "validity")
+        days = crlparam.validity
         crl_binary = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_ASN1, days=days)
         return crl_binary
 
@@ -143,8 +145,10 @@ class SSL:
 
     @staticmethod
     def set_crl(crl):
-        days = ConfigObject.getint("crl", "validity")
-        crl_str = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_PEM, days=days)
+        crlparam = CrlParameter.get()
+        days = crlparam.validity
+        digest = crlparam.digest.encode()
+        crl_str = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_PEM, days=days, digest=digest)
         f = open(SSL.get_crl_path(), "w")
         f.write(crl_str.decode('utf-8'))
         f.close()
@@ -425,19 +429,7 @@ class SSL:
                 OpenSSL.crypto.X509Extension(b"authorityInfoAccess", False, ocspUri)
             ])
 
-        # if caparam.typeca == "subca":
-        #     if caparam.typeca == "subca":
-        #         api = API(caparam.parentca)
-        #     data = api.push("ca_sign", {
-        #         "digest": caparam.digest,
-        #         "cert": api.encode_cert(ca)
-        #     })
-        #     if data['state'] == 'OK':
-        #         ca_signed = api.decode_cert(data['response'])
-        #     else:
-        #         print("Error during sign from remote API of Parent CA")
-        #         return False
-        # else:
+        # @TODO if type = subca, sign this subca with the parent ca
         ca_signed = SSL.sign(ca, pkey, caparam.digest)
 
         SSL.set_ca(ca_signed)
@@ -463,30 +455,6 @@ class SSL:
         if ldapparam.enable and "false" not in profile.ldap:
             log.info("Search in LDAP")
             # @TODO ldap search based on ManPKI Profile
-            # l = LDAP()
-            # filter = Config().config.get("profile_" + profile, "ldap")
-            # res = l.get_dn(l.get_basedn(), filter, ['cn', 'mail', 'uid'])
-            # listSearch = {}
-            # users = {}
-            # for elt in res:
-            #     key = elt[0]
-            #     val = elt[1]['cn'][0]
-            #     mail = None
-            #     if 'mail' in elt[1].keys():
-            #         mail = elt[1]['mail'][0]
-            #         val = val + " (mail : " + elt[1]['mail'][0] + ")"
-            #     listSearch.update({key: val})
-            #     users.update({key: {'mail': mail, 'cn': elt[1]['cn'][0]}})
-            # nbr_select = 0
-            # while nbr_select != 1:
-            #     userList = Render.print_selector(listSearch)
-            #     nbr_select = len(userList)
-            # email = users[userList[0]]['mail']
-            # cn = users[userList[0]]['cn']
-            # subject_array = userList[0].split(',')
-            # subject_array.reverse()
-            # subject_array.pop()
-            # subject = '/'.join(subject_array) + "/CN=" + cn
         else:
             cn = data['cn']
             email = data['mail']
