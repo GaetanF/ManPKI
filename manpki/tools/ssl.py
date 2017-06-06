@@ -87,9 +87,9 @@ class SSL:
     @staticmethod
     def get_crl_binary():
         crlparam = CrlParameter.get()
-        crl = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, open(SSL.get_crl_path(), "rt").read())
+        crl = SSL.get_crl()
         days = crlparam.validity
-        crl_binary = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_ASN1, days=days)
+        crl_binary = crl.export(SSL.get_ca(), SSL.get_ca_privatekey(), type=OpenSSL.crypto.FILETYPE_ASN1, days=days, digest=b'sha256')
         return crl_binary
 
     @staticmethod

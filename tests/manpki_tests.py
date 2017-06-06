@@ -879,6 +879,16 @@ class ManpkiTestCase(unittest.TestCase):
                          ['algorithm', 'finger_md5', 'finger_sha1', 'id', 'issuer', 'keysize', 'notafter', 'notbefore',
                           'raw', 'serial', 'signature', 'state', 'subject', 'version'])
 
+    def test_manpki_tools_ssl_get_asn_cert_raw(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        manpki.tools.ssl.SSL.create_ca()
+        self.put('/v1.0/cert', data='{"cn": "TestCert1", "mail": "testcert@manpki.com", "profile":"SSLServer"}')
+        certs = manpki.tools.ssl.SSL.get_all_certificates()
+        self.assertEqual(len(certs), 1)
+        id = certs[0]['id']
+        asn_cert = manpki.tools.ssl.SSL.get_asn_cert_raw(id)
+        self.assertIsInstance(asn_cert, bytes)
+
     def test_manpki_tools_ssl_create_extension(self):
         ext = manpki.tools.ssl.SSL.create_extension('keyUsage'.encode('utf8'), 'keyCertSign'.encode('utf8'), True)
         self.assertIsInstance(ext, OpenSSL.crypto.X509Extension)
