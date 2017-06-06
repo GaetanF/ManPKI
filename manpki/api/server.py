@@ -1,7 +1,7 @@
 import os
 from flask import json, request
-from manpki.tools import SSL, API, multi_auth, ConfigObject
-from manpki.config import write
+from manpki.tools import SSL, API, multi_auth
+from manpki.config import write, ConfigObject
 from manpki.logger import log
 from manpki.tools.reloader import reload
 

@@ -6,9 +6,7 @@ from datetime import datetime, timedelta
 from pyasn1.codec.der import decoder
 from pyasn1.type import univ
 from pytz import UTC
-
 from manpki.tools.event import event
-from manpki.config import ConfigObject
 from manpki.asn1 import rfc2459
 from manpki.db import *
 
