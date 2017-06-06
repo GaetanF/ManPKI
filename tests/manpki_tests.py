@@ -820,12 +820,70 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertIsNone(manpki.tools.ssl.SSL.get_cert(0))
         self.assertIsNone(manpki.tools.ssl.SSL.get_cert(None))
 
-    def test_manpki_tools_ssl_generate_crl(self):
+    def test_manpki_tools_ssl_generate_crl_with_ca(self):
         manpki.tools.ssl.SSL.delete_all_certs()
         manpki.tools.ssl.SSL.delete_ca()
         rv = self.put('/v1.0/ca')
         self.assertEqual(rv.status_code, 200)
         self.assertTrue(manpki.tools.ssl.SSL.generate_crl())
+
+    def test_manpki_tools_ssl_generate_crl_without_ca(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        self.assertFalse(manpki.tools.ssl.SSL.generate_crl())
+
+    def test_manpki_tools_ssl_check_parentca(self):
+        manpki.tools.ssl.SSL.delete_all_certs()
+        manpki.tools.ssl.SSL.delete_ca()
+        self.assertFalse(manpki.tools.ssl.SSL.check_parentca_exist())
+
+    def test_manpki_tools_ssl_get_crl_exist(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        self.assertTrue(manpki.tools.ssl.SSL.generate_crl())
+        crl = manpki.tools.ssl.SSL.get_crl()
+        self.assertIsInstance(crl, OpenSSL.crypto.CRL)
+        self.assertEqual(crl.get_issuer().hash(), 163884471)
+
+    def test_manpki_tools_ssl_get_crl_notexist(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        crl = manpki.tools.ssl.SSL.get_crl()
+        self.assertIsNone(crl)
+
+    def test_manpki_tools_ssl_get_crl_binary(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        self.assertTrue(manpki.tools.ssl.SSL.generate_crl())
+        crlbin = manpki.tools.ssl.SSL.get_crl_binary()
+        self.assertIsInstance(crlbin, bytes)
+
+    def test_manpki_tools_ssl_get_json_all_certificates(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        manpki.tools.ssl.SSL.create_ca()
+        self.put('/v1.0/cert', data='{"cn": "TestCert1", "mail": "testcert@manpki.com", "profile":"SSLServer"}')
+        self.put('/v1.0/cert', data='{"cn": "TestCert2", "mail": "testcert@manpki.com", "profile":"SSLServer"}')
+        json = manpki.tools.ssl.SSL.get_json_all_certificates()
+        self.assertEqual(len(json), 2)
+        cert_one = json[0]
+        data_keys = list(cert_one.keys())
+        data_keys.sort()
+        self.assertEqual(data_keys,
+                         ['algorithm', 'finger_md5', 'finger_sha1', 'id', 'issuer', 'keysize', 'notafter', 'notbefore',
+                          'raw', 'serial', 'signature', 'state', 'subject', 'version'])
+        cert_one = json[1]
+        data_keys = list(cert_one.keys())
+        data_keys.sort()
+        self.assertEqual(data_keys,
+                         ['algorithm', 'finger_md5', 'finger_sha1', 'id', 'issuer', 'keysize', 'notafter', 'notbefore',
+                          'raw', 'serial', 'signature', 'state', 'subject', 'version'])
+
+    def test_manpki_tools_ssl_create_extension(self):
+        ext = manpki.tools.ssl.SSL.create_extension('keyUsage'.encode('utf8'), 'keyCertSign'.encode('utf8'), True)
+        self.assertIsInstance(ext, OpenSSL.crypto.X509Extension)
+        self.assertTrue(ext.get_critical())
+        self.assertEqual(ext.get_short_name(), 'keyUsage'.encode('utf8'))
 
     def test_manpki_tools_ssl_generate_key(self):
         key = manpki.tools.ssl.SSL.create_key(1001)
