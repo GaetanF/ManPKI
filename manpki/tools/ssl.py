@@ -78,8 +78,11 @@ class SSL:
 
     @staticmethod
     def get_crl():
-        with open(SSL.get_crl_path(), "rt") as crl:
-            return OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, crl.read())
+        if SSL.check_crl_exist():
+            with open(SSL.get_crl_path(), "rt") as crl:
+                return OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, crl.read())
+        else:
+            return None
 
     @staticmethod
     def get_crl_binary():
@@ -180,10 +183,17 @@ class SSL:
     def delete_ca():
         for cert in SSL.get_all_certificates():
             SSL.delete_cert(cert['id'])
+        if SSL.check_crl_exist():
+            os.unlink(SSL.get_crl_path())
         if os.path.isfile(SSL.get_ca_privatekey_path()):
             os.unlink(SSL.get_ca_privatekey_path())
         if os.path.isfile(SSL.get_ca_path()):
             os.unlink(SSL.get_ca_path())
+
+    @staticmethod
+    def delete_crl():
+        if SSL.check_crl_exist():
+            os.unlink(SSL.get_crl_path())
 
     @staticmethod
     def get_cert(certid):
