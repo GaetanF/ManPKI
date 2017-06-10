@@ -60,11 +60,15 @@ def create_ca():
         log.info("CA already exist")
         data = request.get_json(silent=True)
         if data and 'force' in data and data['force']:
-            SSL.create_ca(force=data['force'])
-            if SSL.check_ca_exist():
-                ca = SSL.display_cert(SSL.get_ca())
-                message = {'message': 'ca created with force', 'ca': ca}
-                code = 200
+            if SSL.delete_ca():
+                toto = SSL.create_ca(force=data['force'])
+                if SSL.check_ca_exist():
+                    ca = SSL.display_cert(SSL.get_ca())
+                    message = {'message': 'ca created with force', 'ca': ca}
+                    code = 200
+                else:
+                    code = 404
+                    message = {'error': 'unable to create the ca'}
             else:
                 code = 404
                 message = {'error': 'unable to create the ca'}
@@ -141,7 +145,7 @@ def register_subca(digest, cert):
     pass
 
 
-@API.route("/ca", None, method='DELETE', level=API.ADMIN)
+@API.route("/ca", "delete ca", method='DELETE', level=API.ADMIN)
 @multi_auth.login_required
 def delete_ca():
     if SSL.delete_ca():
