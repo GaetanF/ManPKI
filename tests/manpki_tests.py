@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import os
 import sys
+import manpki
 import manpki.server
 import unittest
 import OpenSSL
@@ -19,7 +20,7 @@ import manpki.tools.reloader
 import manpki.tools.event
 import manpki.api
 from io import StringIO
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 from datetime import datetime, timedelta
 import logging
 
@@ -173,6 +174,20 @@ class ManpkiTestCase(unittest.TestCase):
         importlib.reload(manpki.config)
         run_dir = manpki.config.get_run_directory([])
         self.assertIsNone(run_dir)
+
+    def test_manpki_config_override_logfile(self):
+        self.assertEqual(manpki.config.LOGFILE, '/var/log/manpki/manpkid.log')
+        import builtins
+        builtins.LOGFILE = '/tmp/toto.log'
+        importlib.reload(manpki.config)
+        self.assertEqual(manpki.config.LOGFILE, '/tmp/toto.log')
+
+    def test_manpki_config_override_daemon(self):
+        self.assertFalse(manpki.config.DAEMON)
+        import builtins
+        builtins.DAEMON = True
+        importlib.reload(manpki.config)
+        self.assertTrue(manpki.config.DAEMON)
 
     def test_manpki_api_page_not_found(self):
         rv = self.app.get('/not_a_page')
@@ -1117,6 +1132,27 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertIsInstance(out[0], MagicMock)
         self.assertEqual(out[0], mock1)
         self.assertEqual(out[1], mock2)
+
+    def test_manpki_version_init(self):
+        ver = manpki._get_version_from_init()
+        self.assertEqual(ver, manpki.VERSION)
+
+    def test_manpki_version_from_file(self):
+        if os.path.isfile(manpki._VERSION_FILE):
+            os.unlink(manpki._VERSION_FILE)
+        m = mock_open(read_data="1.1.1.1")
+        with patch('manpki.open', m, create=True):
+            ver = manpki._version()
+        self.assertEqual(ver, "1.1.1.1")
+
+    def test_manpki_version_from_file_ioerror(self):
+        if os.path.isfile(manpki._VERSION_FILE):
+            os.unlink(manpki._VERSION_FILE)
+        mock = MagicMock()
+        mock.mock_open.side_effect = IOError()
+        with patch('manpki.open', mock.mock_open, create=True):
+            ver = manpki._version()
+        self.assertEqual(ver, manpki.VERSION)
 
 
 if __name__ == '__main__':
