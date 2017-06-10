@@ -203,7 +203,7 @@ class API:
     @staticmethod
     def route(url, command, method='GET', level=USER, defaults=None, context=None, args=None, render=None):
         def decorator(f):
-            if url and command:
+            if url:
                 api_dict = {
                     "command": command,
                     "url": "/" + API_VERSION + url,
