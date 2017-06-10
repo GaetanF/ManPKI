@@ -139,10 +139,14 @@ class SSL:
     def delete_cert(certid):
         path_cert = SSL.get_cert_path(certid)
         path_key = SSL.get_cert_privatekey_path(certid)
-        if os.path.isfile(path_key):
-            os.unlink(path_key)
-        if os.path.isfile(path_cert):
-            os.unlink(path_cert)
+        try:
+            if os.path.isfile(path_key):
+                os.unlink(path_key)
+            if os.path.isfile(path_cert):
+                os.unlink(path_cert)
+        except OSError:
+            return False
+        return True
 
     @staticmethod
     def set_crl(crl):
@@ -167,7 +171,9 @@ class SSL:
     @staticmethod
     def delete_all_certs():
         for cert in SSL.get_all_certificates():
-            SSL.delete_cert(cert['id'])
+            if not SSL.delete_cert(cert['id']):
+                return False
+        return True
 
     @staticmethod
     def get_json_all_certificates():
@@ -182,13 +188,18 @@ class SSL:
     @staticmethod
     def delete_ca():
         for cert in SSL.get_all_certificates():
-            SSL.delete_cert(cert['id'])
-        if SSL.check_crl_exist():
-            os.unlink(SSL.get_crl_path())
-        if os.path.isfile(SSL.get_ca_privatekey_path()):
-            os.unlink(SSL.get_ca_privatekey_path())
-        if os.path.isfile(SSL.get_ca_path()):
-            os.unlink(SSL.get_ca_path())
+            if not SSL.delete_cert(cert['id']):
+                return False
+        try:
+            if SSL.check_crl_exist():
+                os.unlink(SSL.get_crl_path())
+            if os.path.isfile(SSL.get_ca_privatekey_path()):
+                os.unlink(SSL.get_ca_privatekey_path())
+            if os.path.isfile(SSL.get_ca_path()):
+                os.unlink(SSL.get_ca_path())
+        except OSError:
+            return False
+        return True
 
     @staticmethod
     def delete_crl():
