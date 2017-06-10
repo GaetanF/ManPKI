@@ -16,6 +16,7 @@ import manpki.tools
 import manpki.tools.api
 import manpki.tools.ssl
 import manpki.tools.reloader
+import manpki.tools.event
 import manpki.api
 from io import StringIO
 from unittest.mock import patch, MagicMock
@@ -320,6 +321,54 @@ class ManpkiTestCase(unittest.TestCase):
         self.assertEqual(rv.status_code, 200)
         self.assertEqual(len(rv.data), 2)
         self.assertEqual(rv.data['message'], 'ca created with force')
+
+    @patch('manpki.tools.ssl.SSL.create_ca', return_value=None)
+    def test_manpki_api_ca_create_with_error(self, mock_create_ca):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 404)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['error'], 'unable to create the ca')
+
+    def test_manpki_api_ca_create_already_exist_with_create_error(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        with patch('manpki.tools.ssl.SSL.create_ca', return_value=False) as mock_create_ca:
+            rv = self.put('/v1.0/ca', data='{"force": true}')
+            self.assertEqual(rv.status_code, 404)
+            self.assertEqual(len(rv.data), 1)
+            self.assertEqual(rv.data['error'], 'unable to create the ca')
+
+    def test_manpki_api_ca_create_already_exist_with_deletion_error(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        with patch('manpki.tools.ssl.SSL.delete_ca', return_value=False) as mock_create_ca:
+            rv = self.put('/v1.0/ca', data='{"force": true}')
+            self.assertEqual(rv.status_code, 404)
+            self.assertEqual(len(rv.data), 1)
+            self.assertEqual(rv.data['error'], 'unable to create the ca')
+
+    def test_manpki_api_ca_delete_ok(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        rv = self.delete('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        self.assertEqual(len(rv.data), 1)
+        self.assertEqual(rv.data['ca'], 'deleted')
+
+    def test_manpki_api_ca_delete_ca_with_error(self):
+        manpki.tools.ssl.SSL.delete_ca()
+        rv = self.put('/v1.0/ca')
+        self.assertEqual(rv.status_code, 200)
+        with patch('os.unlink') as mock_os_unlink:
+            mock_os_unlink.side_effect = OSError('Some error was thrown')
+            rv = self.delete('/v1.0/ca')
+            self.assertEqual(rv.status_code, 404)
+            self.assertEqual(len(rv.data), 1)
+            self.assertEqual(rv.data['ca'], 'error with deletion')
 
     def test_manpki_api_show_ca_not_create(self):
         manpki.tools.ssl.SSL.delete_ca()
@@ -973,6 +1022,101 @@ class ManpkiTestCase(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             manpki.tools.reloader._reload()
         self.assertEqual(cm.exception.code, 3)
+
+    def test_manpki_tools_event_new_event_on(self):
+        manpki.tools.event.off_all()
+        mock = MagicMock(return_value=None)
+        manpki.tools.event.on('test.event', mock)
+        manpki.tools.event.emit('test.event')
+        self.assertTrue(mock.called)
+
+    def test_manpki_tools_event_new_event_on_decorator(self):
+        manpki.tools.event.off_all()
+        mock = MagicMock(return_value=True)
+
+        @manpki.tools.event.on('test.decorator')
+        def event_func():
+            mock()
+            return True
+
+        manpki.tools.event.emit('test.decorator')
+        self.assertTrue(mock.called)
+
+    def test_manpki_tools_event_new_event_on_any(self):
+        manpki.tools.event.off_all()
+        mock1 = MagicMock(return_value=True)
+        mock2 = MagicMock(return_value=True)
+        manpki.tools.event.on('test.not_event', mock1)
+        manpki.tools.event.on_any(mock2)
+        manpki.tools.event.emit('test.event')
+        self.assertFalse(mock1.called)
+        self.assertTrue(mock2.called)
+
+    def test_manpki_tools_event_new_event_on_any_decorator(self):
+        manpki.tools.event.off_all()
+        mock1 = MagicMock(return_value=True)
+        mock2 = MagicMock(return_value=True)
+
+        @manpki.tools.event.on_any()
+        def event_func():
+            mock1()
+            return True
+
+        @manpki.tools.event.on('test.not_decorator')
+        def event_func():
+            mock2()
+            return True
+
+        manpki.tools.event.emit('test.decorator')
+        self.assertTrue(mock1.called)
+        self.assertFalse(mock2.called)
+
+    def test_manpki_tools_event_new_event_off_any(self):
+        manpki.tools.event.off_all()
+        mock1 = MagicMock(return_value=True)
+
+        @manpki.tools.event.on_any()
+        def event_func():
+            mock1()
+            return True
+
+        manpki.tools.event.off_any(event_func)
+        manpki.tools.event.emit('test.decorator')
+        self.assertFalse(mock1.called)
+
+    def test_manpki_tools_event_listeners(self):
+        manpki.tools.event.off_all()
+        mock1 = MagicMock(return_value=True)
+        manpki.tools.event.on('test.listeners', mock1)
+        out = manpki.tools.event.listeners('test.listeners')
+        self.assertEqual(len(out), 1)
+        self.assertIsInstance(out[0], MagicMock)
+        self.assertEqual(out[0], mock1)
+        out = manpki.tools.event.listeners('test.not_listeners')
+        self.assertEqual(len(out), 0)
+
+    def test_manpki_tools_event_listeners_any(self):
+        manpki.tools.event.off_all()
+        mock1 = MagicMock(return_value=True)
+        mock2 = MagicMock(return_value=True)
+        manpki.tools.event.on('test.listeners', mock1)
+        manpki.tools.event.on_any(mock2)
+        out = manpki.tools.event.listeners_any()
+        self.assertEqual(len(out), 1)
+        self.assertIsInstance(out[0], MagicMock)
+        self.assertEqual(out[0], mock2)
+
+    def test_manpki_tools_event_listeners_all(self):
+        manpki.tools.event.off_all()
+        mock1 = MagicMock(return_value=True)
+        mock2 = MagicMock(return_value=True)
+        manpki.tools.event.on('test.listeners', mock1)
+        manpki.tools.event.on_any(mock2)
+        out = manpki.tools.event.listeners_all()
+        self.assertEqual(len(out), 2)
+        self.assertIsInstance(out[0], MagicMock)
+        self.assertEqual(out[0], mock1)
+        self.assertEqual(out[1], mock2)
 
 
 if __name__ == '__main__':

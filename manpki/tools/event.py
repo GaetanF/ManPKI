@@ -1,3 +1,5 @@
+from time import time
+
 class EventEmitter:
     __CBKEY = "__callbacks"
 
@@ -174,14 +176,16 @@ class EventEmitter:
         """
         listeners = self.__tree[self.__CBKEY][:]
 
-        branches = self.__tree.values()
+        branches = list(self.__tree.values())
         for b in branches:
             if not isinstance(b, dict):
                 continue
 
-            branches.extend(b.values())
+            branches.extend(list(b.values()))
 
             listeners.extend(b[self.__CBKEY])
+
+        listeners.sort(key=lambda l: l.time)
 
         return [l.func for l in listeners]
 
@@ -193,7 +197,7 @@ class EventEmitter:
         parts = event.split(self.delimiter)
 
         if self.__CBKEY in parts:
-            return
+            return False
 
         listeners = self.__tree[self.__CBKEY][:]
 
@@ -212,12 +216,13 @@ class EventEmitter:
         for b in branches:
             listeners.extend(b[self.__CBKEY])
 
-        listeners.sort()
+        listeners.sort(key=lambda l: l.time)
 
         remove = [l for l in listeners if not l(*args, **kwargs)]
 
         for l in remove:
-            self.off(l.event, func=l.func)
+            if l.event:
+                self.off(l.event, func=l.func)
 
 
 class Listener:
@@ -229,6 +234,7 @@ class Listener:
 
         self.func = func
         self.event = event
+        self.time = time()
 
     def __call__(self, *args, **kwargs):
         """
