@@ -24,6 +24,9 @@ all:
 run:
 	PYTHONPATH=$(PYTHONPATH) ./bin/manpkid 
 
+debug:
+	PYTHONPATH=$(PYTHONPATH) ./bin/manpkid -D
+
 test:
 	tests/manpki_tests.py
 

@@ -78,7 +78,7 @@ def create_ca():
     return message, code
 
 
-@API.route("/ca/param", "set", method='POST', level=API.ADMIN, context="ca", args=[
+@API.route("/ca/param", "set [param=value]", method='POST', level=API.ADMIN, context="ca", args=[
     {"name": "basecn", "type": "str", "mandatory": False},
     {"name": "email", "type": "Mail", "mandatory": False},
     {"name": "keysize", "type": "int", "mandatory": False},
@@ -133,7 +133,7 @@ def get_caparam(param):
     return the_return, 200
 
 
-@API.route("/ca/register", None, method='POST', args=[
+@API.route("/ca/register", None, method='POST', context="ca", args=[
     {"name": "digest", "type": "str", "mandatory": True},
     {"name": "cert", "type": "str", "mandatory": True},
 ], level=API.ADMIN)
@@ -145,7 +145,7 @@ def register_subca(digest, cert):
     pass
 
 
-@API.route("/ca", "delete ca", method='DELETE', level=API.ADMIN)
+@API.route("/ca", "delete ca", method='DELETE', context="ca", level=API.ADMIN)
 @multi_auth.login_required
 def delete_ca():
     if SSL.delete_ca():

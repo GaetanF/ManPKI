@@ -7,7 +7,7 @@ from gevent import socket
 from ssl import PROTOCOL_SSLv23
 import pwd
 
-from manpki.config import WEB_SECRET, envready, get_run_directory
+from manpki.config import WEB_SECRET, envready, get_run_directory, ConfigObject
 from manpki.tools import *
 from manpki.db import ServerParameter
 from manpki.i18n import *
