@@ -17,7 +17,7 @@ class ParamModel(TinyJsonModel):
         super(ParamModel, self).__init__(*args, **kwargs)
 
     @classmethod
-    def get(cls, cond=None, eid=None, cuid=None):
+    def get(cls, cond=None, doc_id=None, cuid=None):
         cls.__tablename__ = ParamModel.__tablename__
         return super(ParamModel, cls).get(where('object') == cls.object)
 
@@ -130,7 +130,7 @@ class ExtensionModel(TinyJsonModel):
             self._default = False
 
     @classmethod
-    def get(cls, cond=None, eid=None, cuid=None):
+    def get(cls, cond=None, doc_id=None, cuid=None):
         cls.__tablename__ = ExtensionModel.__tablename__
         if isinstance(cls.type, str):
             return super(ExtensionModel, cls).get(where('type') == cls.type)
@@ -138,7 +138,7 @@ class ExtensionModel(TinyJsonModel):
             return super(ExtensionModel, cls).get(cond=cond)
 
     @classmethod
-    def search(cls, cond=None, eid=None, cuid=None):
+    def search(cls, cond=None, doc_id=None, cuid=None):
         cls.__tablename__ = ExtensionModel.__tablename__
         table = cls.Meta.database.table(cls.__tablename__)
         if isinstance(cls.type, str):
