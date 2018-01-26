@@ -10,7 +10,7 @@ from setuptools import find_packages
 
 VERSION = __import__('manpki').VERSION
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
+with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
     long_description = readme.read()
 
 
@@ -35,7 +35,7 @@ if os.name == 'nt':
     pgm_files = os.environ["ProgramFiles"]
     base_files = os.path.join(pgm_files, 'manpki')
     data_files = [
-        (base_files, ['README.md']),
+        (base_files, ['README.rst']),
         (os.path.join(base_files, 'utils'), []),
         (os.path.join(base_files, 'etc'), glob('etc/*.conf')),
     ]
