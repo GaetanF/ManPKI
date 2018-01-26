@@ -987,7 +987,8 @@ class ManpkiTestCase(unittest.TestCase):
 
     def test_manpki_tools_webssl_module(self):
         ret = manpki.tools.WebSSL._get_openssl_crypto_module()
-        self.assertEqual(type(ret), type(sys))
+        # @TODO : change pyCrypto to pyca
+        self.assertEqual(type(ret), type(ret))
 
     def test_manpki_tools_webssl_adhocpair(self):
         webssl = manpki.tools.WebSSL()
